@@ -1,0 +1,43 @@
+.note-title {
+  border-width: 0px;
+  border-radius: 0px;
+  background-color: @theme_bg_color;
+  /*text-shadow: inset 1px 1px 1px @light_shadow;*/
+  padding: 2px;
+  font-weight: bold;
+  font-size: 12px;
+  padding: 5px;
+  /*border: 0px 0px 1px 0px;*/
+  /*border-bottom: 1px;*/
+  /*background-color: white;*/
+}
+
+.list-header {
+  border-width: 1px;
+  border-bottom-color: darker(@bg_color);
+  border-bottom-style: solid;
+}
+
+.list-header-label {
+  padding: 5px;
+  font-weight: bold;
+}
+
+.note-listrow-title {
+  font-weight: bold;
+
+}
+
+.note-listrow-sub {
+  font-size: smaller;
+  /*color: @fg_color;*/
+}
+/*.rounded-box {
+  border-radius: 4px;
+  border-width: 1px;
+  background-image: linear-gradient(
+    to bottom,
+    shade(shade(@theme_base_color, 0.89), 1.05),
+    shade(shade(@theme_base_color, 0.96), 0.97)
+  );
+}*/
