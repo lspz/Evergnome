@@ -1,13 +1,5 @@
 from gi.repository import Gtk
 
-def build_header(label):
-  label = Gtk.Label(label)
-  label.get_style_context().add_class('list-header-label')
-  box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, halign=Gtk.Align.FILL, valign=Gtk.Align.FILL)
-  box.pack_start(label, True, True, 0)
-  box.get_style_context().add_class('list-header')
-  return box
-
 def show_message_dialog(msg, message_type, buttons_type):
   flags = Gtk.DialogFlags.MODAL | Gtk.DialogFlags.USE_HEADER_BAR
   dialog = Gtk.MessageDialog(self, flags, message_type, buttons_type, msg)

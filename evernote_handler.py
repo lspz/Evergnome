@@ -35,14 +35,18 @@ class SyncDeleter(SyncObjectProcess):
     self._deleted_list = deleted_list
     self._recursive = recursive
 
-  def process(self, api_obj):
-    db_obj = self._local_objects.get(api_obj.guid)
+  def process(self, data):
+    if isinstance(data, basestring):
+      guid = data
+    else: # huh? Assume that we pass evernote api obj 
+      guid = data.guid
+    db_obj = self._local_objects.get(guid)
     if db_obj is not None:
-      if self._has_conflict(db_obj, api_obj):
-        self._handle_conflict(db_obj, api_obj)
+      if self._has_conflict(db_obj, None):
+        self._handle_conflict(db_obj, None)
         return
       del self._local_objects[db_obj.guid]
-      self._deleted_list.append[db_obj]
+      self._deleted_list.append(db_obj)
       db_obj.delete_instance(recursive=self._recursive)
     # huh? handle else?
 
@@ -52,7 +56,7 @@ class SyncUpdater(SyncObjectProcess):
   _updated_list = None
 
   def __init__(self, class_type, local_objects, notestore, conflict_list, added_list, updated_list):
-    SyncObjectProcess.__init__(self, Note, local_objects, conflict_list)
+    SyncObjectProcess.__init__(self, class_type, local_objects, conflict_list)
     self._notestore = notestore
     self._added_list = added_list
     self._updated_list = updated_list
@@ -150,14 +154,14 @@ class EvernoteHandler:
       if self.auth_user is None:
         return
     self._events.emit('sync_started')
-    try:
-      self._do_sync()
-      self._events.emit('sync_ended', EvernoteProcessStatus.SUCCESS)
-    except Exception, e:
-      print e
-      self._events.emit('sync_ended', EvernoteProcessStatus.SYNC_ERROR)
-    # self._do_sync()
-    # self._events.emit('sync_ended', EvernoteProcessStatus.SUCCESS)
+    # try:
+    #   self._do_sync()
+    #   self._events.emit('sync_ended', EvernoteProcessStatus.SUCCESS)
+    # except Exception, e:
+    #   print e
+    #   self._events.emit('sync_ended', EvernoteProcessStatus.SYNC_ERROR)
+    self._do_sync()
+    self._events.emit('sync_ended', EvernoteProcessStatus.SUCCESS)
 
   def _do_sync(self):
     syncstate_db_obj = self._localstore.syncstate

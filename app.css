@@ -1,26 +1,44 @@
-.note-title {
-  border-width: 0px;
-  border-radius: 0px;
-  background-color: @theme_bg_color;
-  /*text-shadow: inset 1px 1px 1px @light_shadow;*/
-  padding: 2px;
-  font-weight: bold;
-  font-size: 12px;
-  padding: 5px;
-  /*border: 0px 0px 1px 0px;*/
-  /*border-bottom: 1px;*/
-  /*background-color: white;*/
+
+.sidebar {
+  /*background-color: @theme_bg_color;*/
+/*  border-right-width: 4px;
+  border-right-color: darker(@bg_color);
+  border-right-style: solid;*/
 }
 
-.list-header {
-  border-width: 1px;
+.sidebar-listbox {
+  /*background-color: @theme_base_color;*/
+}
+
+.sidebar-header {
+  border-bottom-width: 1px;
   border-bottom-color: darker(@bg_color);
   border-bottom-style: solid;
+
+/*  border-top-width: 1px;
+  border-top-color: darker(@bg_color);
+  border-top-style: solid;*/
+
+  background-color: @theme_bg_color;
+
+/*  background-image: linear-gradient(
+    to bottom,
+    shade(@theme_bg_color, 0.80),
+    shade(@theme_bg_color, 0.96)
+  ); */
 }
 
-.list-header-label {
+.sidebar-header-label {
   padding: 5px;
   font-weight: bold;
+}
+
+.btn-reveal {
+  border-radius: 0px;
+}
+
+.note-listbox {
+  background-color: @bg_color;
 }
 
 .note-listrow-title {
@@ -31,6 +49,33 @@
 .note-listrow-sub {
   font-size: smaller;
   /*color: @fg_color;*/
+}
+
+.note-headerbox{
+  background-color: @theme_base_color;
+}
+
+.note-title {
+
+  /*text-shadow: inset 1px 1px 1px @light_shadow;*/
+  font-weight: bold;
+  font-size: 12px;
+  padding: 5px;
+  /*background: @theme_base_color;*/
+  /*border: 0px 0px 1px 0px;*/
+  /*border-bottom: 1px;*/
+  /*background-color: white;*/
+}
+
+.note-view-scrollbox {
+  background-color: darker(@theme_bg_color);
+}
+
+.opaque {
+/*  border-width: 0px;
+  border-radius: 0px;*/
+  border-style: none;
+  background: transparent;
 }
 /*.rounded-box {
   border-radius: 4px;

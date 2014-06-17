@@ -33,9 +33,10 @@ class EverGnomeApp(Gtk.Application):
     self.connect("activate", self.on_activate)
 
   def on_activate(self, data=None):
-    config = AppConfig(APP_CONFIG_PATH)
+    self.config = AppConfig(APP_CONFIG_PATH)
+
     self.events = EventController()
-    self.localstore = LocalStore(config.db_path)
+    self.localstore = LocalStore(self.config.db_path)
     self.localstore.load()
     self.evernote_handler = EvernoteHandler(self.localstore, self.events)
 

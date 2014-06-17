@@ -14,7 +14,7 @@ class LocalStore:
     self._db = SqliteDatabase(path, check_same_thread=False, autocommit=False)
     db_proxy.initialize(self._db)
 
-    self.recreate_schema() # huh? this is temp
+    # self.recreate_schema() # huh? this is temp
     
   def recreate_schema(self):
     if not SyncState.table_exists():

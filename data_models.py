@@ -64,6 +64,9 @@ class Note(SyncModel):
         return True
     return False
 
+  def is_deleted(self):
+    return self.deleted_time is not None;
+    
   def _get_content_preview(self):
     return 'Content preview..' # huh? implement
   def _get_updated_desc(self):

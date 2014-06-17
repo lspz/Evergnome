@@ -10,8 +10,9 @@ class EventController(GObject.GObject):
     'sync_ended': (GObject.SIGNAL_RUN_FIRST, None, (int,)),
 
     'notebook_changed': (GObject.SIGNAL_RUN_FIRST, None, (int,)),
-    'tag_changed': (GObject.SIGNAL_RUN_FIRST, None, (int,))
-    # 'notebook_updated': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+    'tag_changed': (GObject.SIGNAL_RUN_FIRST, None, (int,)),
+    'sidebar_reveal': (GObject.SIGNAL_RUN_FIRST, None, (bool,)),
+
     # 'notebook_added': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
     # 'notebook_deleted': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
 

@@ -18,25 +18,28 @@ class HeaderBar(Gtk.HeaderBar):
     self.props.show_close_button = True
     self.set_custom_title(self._build_title_bar())
 
-
+    btn_filter = GtkUtils.create_image_button('view-list-symbolic', label='', on_click=self._on_filter_click, toggle=True)
+    btn_filter.set_active(True)
     btn_addnote = GtkUtils.create_image_button('list-add-symbolic', label='New Note', on_click=None)
-    btn_sync = GtkUtils.create_image_button('view-refresh-symbolic', label='Sync')
-    btn_sync.connect('clicked', self._on_sync_clicked)
+    # btn_find = Gtk.Button.new_from_icon_name('edit-find', Gtk.IconSize.BUTTON)
+    # btn_filter.set_relief(Gtk.ReliefStyle.NONE)
+    # btn_addnote.set_relief(Gtk.ReliefStyle.NONE)
+    # btn_find.set_relief(Gtk.ReliefStyle.NONE)
 
-    left_box = Gtk.Box(Gtk.Orientation.HORIZONTAL, spacing=5)
-    left_box.pack_start(btn_addnote, fill=False, expand=False, padding=0)
-    left_box.pack_start(btn_sync, False, False, 0)
-    left_box.pack_start(Gtk.Button.new_from_icon_name('edit-find', Gtk.IconSize.BUTTON), False, False, 0)
+    left_box = Gtk.Box(Gtk.Orientation.HORIZONTAL, spacing=5, valign=Gtk.Align.CENTER)
+    left_box.pack_start(btn_filter, False, False, 0)
+    left_box.pack_start(btn_addnote, False, False, 0)
+    # left_box.pack_start(btn_find, False, False, 0)
 
-    # btn_addnote = Gtk.Button.new_from_icon_name('list-add-symbolic', Gtk.IconSize.BUTTON)
-    # btn_addnote.set_always_show_image(True)
-    # btn_addnote.set_label('New Note')
-
-
-    right_box = Gtk.Box(Gtk.Orientation.HORIZONTAL, spacing=5)
+    right_box = Gtk.Box(Gtk.Orientation.HORIZONTAL, spacing=5, valign=Gtk.Align.CENTER)
     right_box.pack_end(self._build_user_menu(), False, False, 0)
-    # right_box.pack_start(btn_addnote, False, False, 0)
-    
+
+    if app.config.manual_sync:
+      btn_sync = GtkUtils.create_image_button('view-refresh-symbolic', label='Sync')
+      btn_sync.connect('clicked', self._on_sync_clicked)
+      btn_sync.set_relief(Gtk.ReliefStyle.NONE)
+      right_box.pack_start(btn_sync, False, False, 0)
+
     self.pack_start(left_box)
     self.pack_end(right_box)
 
@@ -55,6 +58,9 @@ class HeaderBar(Gtk.HeaderBar):
 
   def _on_sync_clicked(self, sender):
     self._app.sync()
+
+  def _on_filter_click(self, sender):
+    self._app.events.emit('sidebar_reveal', sender.get_active())
 
   def _on_notebook_changed(self, combobox):
     if self.on_after_notebook_changed != None:
@@ -78,7 +84,9 @@ class HeaderBar(Gtk.HeaderBar):
 
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, expand=False, halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
     box.pack_start(label_title, False, False, 0)
-    box.pack_start(box_status, False, False, 0)
+    box.pack_start(box_status, False, False, 2)
+    box.set_margin_top(5)
+    box.set_margin_bottom(5)
     return box
        
   def _build_user_menu(self):
