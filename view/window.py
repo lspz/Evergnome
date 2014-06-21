@@ -16,8 +16,7 @@ class AppWindow(Gtk.ApplicationWindow):
   def __init__(self, app):
     Gtk.ApplicationWindow.__init__(self, application=app)
 
-    self.noteview = NoteView(app.localstore)
-
+    self.noteview = NoteView(app)
     self.contentbox = Gtk.Box()
     self.contentbox.pack_start(self.noteview, True, True, 0)
 

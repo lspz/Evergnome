@@ -15,10 +15,6 @@
   border-bottom-color: darker(@bg_color);
   border-bottom-style: solid;
 
-/*  border-top-width: 1px;
-  border-top-color: darker(@bg_color);
-  border-top-style: solid;*/
-
   background-color: @theme_bg_color;
 
 /*  background-image: linear-gradient(
@@ -38,7 +34,13 @@
 }
 
 .note-listbox {
-  background-color: @bg_color;
+  background-color: @theme_bg_color;
+}
+
+.note-listboxrow {
+  border-bottom-width: 0.5px;
+  border-bottom-style: solid;
+  border-bottom-color: darker(@theme_base_color);
 }
 
 .note-listrow-title {
@@ -51,11 +53,18 @@
   /*color: @fg_color;*/
 }
 
+.note-toolbar-box {
+  border-top-width: 0.5px;
+  border-top-color: darker(@bg_color);
+  border-top-style: solid;
+  background-color: @theme_base_color;
+}
+
 .note-headerbox{
   background-color: @theme_base_color;
 }
 
-.note-title {
+.note-title{
 
   /*text-shadow: inset 1px 1px 1px @light_shadow;*/
   font-weight: bold;
@@ -72,8 +81,8 @@
 }
 
 .opaque {
-/*  border-width: 0px;
-  border-radius: 0px;*/
+  border-width: 0px;
+  border-radius: 0px;
   border-style: none;
   background: transparent;
 }

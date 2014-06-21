@@ -30,22 +30,33 @@ class SidebarView(Gtk.Box):
 
 class BaseSidebarListView(Gtk.Box):
   
-  _listiters = {}
   _liststore = None
+  _listiters = {}
   _events = None
-  _source_dict = None # dict
-  _header_label = ''
-  _selection_all_label = 'All'
   _trash_label = 'Trash'
+  
+  # To be set by subclasses
+  _selection_mode = Gtk.SelectionMode.NONE
   _change_event_name = ''
+  _source_dict = None 
+  _header_label = ''
+  _selection_all_label = ''
+  _item_icon_name = ''
+  _item_all_icon_name = ''
 
   def __init__(self, app):
     Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
     self._events = app.events
 
-    self._liststore = Gtk.ListStore(int, str)  
+    self._liststore = Gtk.ListStore(int, str, str)  
+
+    cell_renderer_icon = Gtk.CellRendererPixbuf()
+    col_icon = Gtk.TreeViewColumn()
+    col_icon.pack_start(cell_renderer_icon, False)
+    col_icon.add_attribute(cell_renderer_icon, 'icon-name', 2)
 
     self._listview = Gtk.TreeView(self._liststore)
+    self._listview.append_column(col_icon)
     self._listview.append_column(Gtk.TreeViewColumn('Name', Gtk.CellRendererText(), text=1))
     self._listview.set_grid_lines(Gtk.TreeViewGridLines.NONE)
     self._listview.set_headers_visible(False)
@@ -54,7 +65,7 @@ class BaseSidebarListView(Gtk.Box):
     self._listview.get_style_context().add_class('sidebar-listbox')
 
     selection = self._listview.get_selection()
-    selection.set_mode(Gtk.SelectionMode.BROWSE)
+    selection.set_mode(self._selection_mode)
     selection.connect('changed', self._on_selection_changed)
 
     scrollbox = Gtk.ScrolledWindow()
@@ -96,20 +107,31 @@ class BaseSidebarListView(Gtk.Box):
     return box
 
   def load_all(self):
-    treeiter = self._liststore.append([SelectionIdConstant.NONE, self._selection_all_label])
+    treeiter = None
+    if self._selection_mode != Gtk.SelectionMode.MULTIPLE:
+      treeiter = self._liststore.append([SelectionIdConstant.NONE, self._selection_all_label, self._item_all_icon_name])
     for obj in self._source_dict.values():
       self.add_obj(obj)
-    self._listview.get_selection().select_iter(treeiter)
+    if treeiter is not None:
+      self._listview.get_selection().select_iter(treeiter)
 
   def _on_selection_changed(self, selection):
-    model, treeiter = selection.get_selected()
-    if treeiter != None:
-      obj_id = model[treeiter][0]
+    if self._selection_mode == Gtk.SelectionMode.MULTIPLE:
+      treepaths, model = selection.get_selected_rows()
+      # huh? iterate selected rows
+      # for treepath in treepaths:
+      obj_id = treepaths[0][0]
       self._events.emit(self._change_event_name, obj_id)
+
+    else:
+      model, treeiter = selection.get_selected()
+      if treeiter != None:
+        obj_id = model[treeiter][0]
+        self._events.emit(self._change_event_name, obj_id)
   
   # Common model interface
   def add_obj(self, obj):
-    self._listiters[obj.id] = self._liststore.append([obj.id, obj.name])
+    self._listiters[obj.id] = self._liststore.append([obj.id, obj.name, self._item_icon_name])
   def update_obj(self, obj):
     _iter = self._listiters.get(obj.id)
     if _iter is not None:
@@ -121,20 +143,30 @@ class BaseSidebarListView(Gtk.Box):
 
 class NotebookListView(BaseSidebarListView):
   def __init__(self, app):
+    # Need to set these before calling super constructor
     self._source_dict = app.localstore.notebooks # dict
-    self._header_label = 'Notebooks'
-    self._selection_all_label = 'All Notebooks'
+    self._selection_mode = Gtk.SelectionMode.BROWSE
     self._change_event_name = 'notebook_changed'
+    self._header_label = 'Notebooks'
+    self._selection_all_label = 'All Notes'
+    self._item_icon_name = 'emblem-documents-symbolic'#'folder-documents-symbolic'
+    self._item_all_icon_name = 'emblem-documents-symbolic'
+
     BaseSidebarListView.__init__(self, app)
 
   def load_all(self):
     BaseSidebarListView.load_all(self)
-    self._liststore.append([SelectionIdConstant.TRASH, self._trash_label])
+    self._liststore.append([SelectionIdConstant.TRASH, self._trash_label, 'user-trash-symbolic'])
 
 class TagListView(BaseSidebarListView):
   def __init__(self, app):
+    # Need to set these before calling super constructor
     self._source_dict = app.localstore.tags # dict
-    self._header_label = 'Tags'
-    self._selection_all_label = 'All Tags'
+    self._selection_mode = Gtk.SelectionMode.MULTIPLE
     self._change_event_name = 'tag_changed'
+    self._header_label = 'Tags'
+    self._item_icon_name = 'folder-tag'
+    self._item_all_icon_name = self._item_icon_name
+    # self._selection_all_label = 'All Tags'
+
     BaseSidebarListView.__init__(self, app)

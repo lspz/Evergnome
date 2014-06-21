@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.18.3 -->
+<interface>
+  <requires lib="gtk+" version="3.12"/>
+  <object class="GtkCheckButton" id="checkbutton3">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="receives_default">False</property>
+    <property name="halign">center</property>
+    <property name="valign">center</property>
+    <property name="focus_on_click">False</property>
+    <property name="xalign">0</property>
+    <property name="yalign">0.57999998331069946</property>
+    <property name="active">True</property>
+    <property name="draw_indicator">True</property>
+  </object>
+  <object class="GtkFileFilter" id="filefilter">
+    <patterns>
+      <pattern>*.jpg</pattern>
+      <pattern>*.png</pattern>
+      <pattern>*.png</pattern>
+    </patterns>
+  </object>
+  <object class="GtkImage" id="image1">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="margin_right">2</property>
+    <property name="icon_name">dialog-ok</property>
+    <property name="icon_size">2</property>
+  </object>
+  <object class="GtkBox" id="box-toolbar">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="no_show_all">True</property>
+    <child>
+      <object class="GtkButton" id="btn-save">
+        <property name="label" translatable="yes">Done</property>
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <property name="receives_default">True</property>
+        <property name="halign">center</property>
+        <property name="valign">center</property>
+        <property name="image">image1</property>
+        <property name="relief">none</property>
+        <property name="always_show_image">True</property>
+        <signal name="clicked" handler="on_note_save" swapped="no"/>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">False</property>
+        <property name="padding">5</property>
+        <property name="pack_type">end</property>
+        <property name="position">0</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkFontButton" id="btn-font-select">
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <property name="receives_default">True</property>
+        <property name="no_show_all">True</property>
+        <property name="halign">center</property>
+        <property name="valign">center</property>
+        <property name="font">Sans 12</property>
+        <property name="preview_text"/>
+        <property name="use_font">True</property>
+        <signal name="font-set" handler="on_note_font_set" swapped="no"/>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">False</property>
+        <property name="padding">1</property>
+        <property name="position">1</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkColorButton" id="btn-color">
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <property name="receives_default">True</property>
+        <property name="no_show_all">True</property>
+        <property name="halign">center</property>
+        <property name="valign">center</property>
+        <signal name="color-set" handler="on_note_color_set" swapped="no"/>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">False</property>
+        <property name="position">2</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkToolbar" id="note-edit-toolbar">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="no_show_all">True</property>
+        <property name="halign">start</property>
+        <property name="valign">center</property>
+        <property name="toolbar_style">icons</property>
+        <property name="icon_size">2</property>
+        <child>
+          <object class="GtkSeparatorToolItem" id="separator1">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="homogeneous">True</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToolButton" id="btn_bold">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="use_underline">True</property>
+            <property name="icon_name">format-text-bold</property>
+            <signal name="clicked" handler="on_note_bold" swapped="no"/>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="homogeneous">True</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToolButton" id="btn_italic">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="use_underline">True</property>
+            <property name="icon_name">format-text-italic</property>
+            <signal name="clicked" handler="on_note_italic" swapped="no"/>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="homogeneous">True</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToolButton" id="btn_underline">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="use_underline">True</property>
+            <property name="icon_name">format-text-underline</property>
+            <signal name="clicked" handler="on_note_underline" swapped="no"/>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="homogeneous">True</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToolButton" id="btn_strikethrough">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="use_underline">True</property>
+            <property name="icon_name">format-text-strikethrough</property>
+            <signal name="clicked" handler="on_note_strikethrough" swapped="no"/>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="homogeneous">True</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkSeparatorToolItem" id="separator2">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="homogeneous">True</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToolButton" id="btn_unindent">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="use_underline">True</property>
+            <property name="icon_name">format-indent-less</property>
+            <signal name="clicked" handler="on_note_unindent" swapped="no"/>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="homogeneous">True</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToolButton" id="btn_indent">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="use_underline">True</property>
+            <property name="icon_name">format-indent-more</property>
+            <signal name="clicked" handler="on_note_indent" swapped="no"/>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="homogeneous">True</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkSeparatorToolItem" id="separator4">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="homogeneous">True</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToolButton" id="btn_align_left">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="use_underline">True</property>
+            <property name="icon_name">format-justify-left</property>
+            <signal name="clicked" handler="on_note_align_left" swapped="no"/>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="homogeneous">True</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToolButton" id="btn_align_center">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="use_underline">True</property>
+            <property name="icon_name">format-justify-center</property>
+            <signal name="clicked" handler="on_note_align_center" swapped="no"/>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="homogeneous">True</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToolButton" id="btn_align_right">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="use_underline">True</property>
+            <property name="icon_name">format-justify-right</property>
+            <signal name="clicked" handler="on_note_align_right" swapped="no"/>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="homogeneous">True</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToolButton" id="btn_align_fill">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="use_underline">True</property>
+            <property name="icon_name">format-justify-fill</property>
+            <signal name="clicked" handler="on_note_align_fill" swapped="no"/>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="homogeneous">True</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkSeparatorToolItem" id="separator3">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="homogeneous">True</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToolButton" id="btn_checkbox">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="use_underline">True</property>
+            <property name="icon_widget">checkbutton3</property>
+            <signal name="clicked" handler="on_note_insert_checkbox" swapped="no"/>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="homogeneous">True</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToolButton" id="btn_insert">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="use_underline">True</property>
+            <property name="icon_name">mail-attachment</property>
+            <signal name="clicked" handler="on_note_insert_object" swapped="no"/>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="homogeneous">True</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToolButton" id="btn_insert_link">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="use_underline">True</property>
+            <property name="icon_name">insert-link</property>
+            <signal name="clicked" handler="on_note_insert_link" swapped="no"/>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="homogeneous">True</property>
+          </packing>
+        </child>
+        <style>
+          <class name="note-toolbar"/>
+          <class name="opaque"/>
+        </style>
+      </object>
+      <packing>
+        <property name="expand">True</property>
+        <property name="fill">True</property>
+        <property name="position">3</property>
+      </packing>
+    </child>
+    <child>
+      <placeholder/>
+    </child>
+    <style>
+      <class name="note-toolbar-box"/>
+    </style>
+  </object>
+</interface>

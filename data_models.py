@@ -1,5 +1,6 @@
 from peewee import *
 from os import path
+from lxml.html import html5parser
 import os
 import binascii
 import consts
@@ -48,6 +49,10 @@ class Note(SyncModel):
   is_active = BooleanField(null=True)
   notebook = ForeignKeyField(Notebook, related_name='notes')
 
+  # Cached stuff - huh? reset onsave
+  _content_preview = None
+  _last_update_desc = None
+
   def update_from_api(self, api_object):
     super(Note, self).update_from_api(api_object)
     self.title = api_object.title
@@ -57,6 +62,7 @@ class Note(SyncModel):
     self.updated_time = api_object.updated
     self.is_active = api_object.active
     self.notebook = Notebook.select().where(Notebook.guid==api_object.notebookGuid).get()
+    self._reset_cache()
 
   def has_tag(self, id):
     for links in self.tag_links:
@@ -67,8 +73,18 @@ class Note(SyncModel):
   def is_deleted(self):
     return self.deleted_time is not None;
     
+  def _reset_cache(self):
+    self._content_preview = None
+    self._last_update_desc = None
+
   def _get_content_preview(self):
-    return 'Content preview..' # huh? implement
+    if self._content_preview is None:
+      doc = html5parser.fromstring(self.content)
+      desc = doc.xpath("string()").strip()
+      desc = (desc[:38] + '..') if len(desc) > 40 else desc
+      self._content_preview = desc.replace('\n', '')
+    return self._content_preview
+
   def _get_updated_desc(self):
     return '1d ago'   # huh? implement
   

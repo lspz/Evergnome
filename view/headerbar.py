@@ -18,7 +18,7 @@ class HeaderBar(Gtk.HeaderBar):
     self.props.show_close_button = True
     self.set_custom_title(self._build_title_bar())
 
-    btn_filter = GtkUtils.create_image_button('view-list-symbolic', label='', on_click=self._on_filter_click, toggle=True)
+    btn_filter = GtkUtils.create_image_button('view-list-symbolic', label='Notebooks & Tags', on_click=self._on_filter_click, toggle=True)
     btn_filter.set_active(True)
     btn_addnote = GtkUtils.create_image_button('list-add-symbolic', label='New Note', on_click=None)
     # btn_find = Gtk.Button.new_from_icon_name('edit-find', Gtk.IconSize.BUTTON)
@@ -37,8 +37,8 @@ class HeaderBar(Gtk.HeaderBar):
     if app.config.manual_sync:
       btn_sync = GtkUtils.create_image_button('view-refresh-symbolic', label='Sync')
       btn_sync.connect('clicked', self._on_sync_clicked)
-      btn_sync.set_relief(Gtk.ReliefStyle.NONE)
-      right_box.pack_start(btn_sync, False, False, 0)
+      # btn_sync.set_relief(Gtk.ReliefStyle.NONE)
+      left_box.pack_start(btn_sync, False, False, 0)
 
     self.pack_start(left_box)
     self.pack_end(right_box)

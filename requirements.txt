@@ -3,4 +3,5 @@ evernote=1.25.0
 
 ---
 GtkWebkit
-html2text
+lxml
+binascii
