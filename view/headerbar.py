@@ -1,34 +1,38 @@
-from gi.repository import Gtk
+from gi.repository import Gtk, Gio
 import gtkutils as GtkUtils
+from model.data_models import UserInfo
+from authwebview import AuthWebView # huh?
 
 ALL_NOTEBOOK_ID = 'all'
 
 class HeaderBar(Gtk.HeaderBar):
 
   on_after_notebook_changed = None
-  _app = None
+  app = None
 
   def __init__(self, app):
     Gtk.HeaderBar.__init__(self)
 
-    self._app = app
-
-    #self.populate_notebooks()
+    self.app = app
 
     self.props.show_close_button = True
     self.set_custom_title(self._build_title_bar())
 
-    btn_filter = GtkUtils.create_image_button('view-list-symbolic', label='Notebooks & Tags', on_click=self._on_filter_click, toggle=True)
-    btn_filter.set_active(True)
-    btn_addnote = GtkUtils.create_image_button('list-add-symbolic', label='New Note', on_click=None)
+    self.btn_filter = GtkUtils.create_image_button('view-list-symbolic', toggle=True)
+    self.btn_filter.set_active(True)
+    btn_new_note = GtkUtils.create_image_button('list-add-symbolic', label='New Note', on_click=self._on_new_note_click)
     # btn_find = Gtk.Button.new_from_icon_name('edit-find', Gtk.IconSize.BUTTON)
-    # btn_filter.set_relief(Gtk.ReliefStyle.NONE)
-    # btn_addnote.set_relief(Gtk.ReliefStyle.NONE)
+    # self.btn_filter.set_relief(Gtk.ReliefStyle.NONE)
+    # btn_new_note.set_relief(Gtk.ReliefStyle.NONE)
     # btn_find.set_relief(Gtk.ReliefStyle.NONE)
 
     left_box = Gtk.Box(Gtk.Orientation.HORIZONTAL, spacing=5, valign=Gtk.Align.CENTER)
-    left_box.pack_start(btn_filter, False, False, 0)
-    left_box.pack_start(btn_addnote, False, False, 0)
+    left_box.pack_start(self.btn_filter, False, False, 0)
+    left_box.pack_start(btn_new_note, False, False, 0)
+
+    # btn_auth = Gtk.Button(label='auth')
+    # btn_auth.connect('clicked', self.on_auth_clicked)
+    # left_box.pack_start(btn_auth, False, False, 0)
     # left_box.pack_start(btn_find, False, False, 0)
 
     right_box = Gtk.Box(Gtk.Orientation.HORIZONTAL, spacing=5, valign=Gtk.Align.CENTER)
@@ -37,30 +41,34 @@ class HeaderBar(Gtk.HeaderBar):
     if app.config.manual_sync:
       btn_sync = GtkUtils.create_image_button('view-refresh-symbolic', label='Sync')
       btn_sync.connect('clicked', self._on_sync_clicked)
-      # btn_sync.set_relief(Gtk.ReliefStyle.NONE)
-      left_box.pack_start(btn_sync, False, False, 0)
+      btn_sync.set_relief(Gtk.ReliefStyle.NONE)
+      right_box.pack_start(btn_sync, False, False, 0)
 
     self.pack_start(left_box)
     self.pack_end(right_box)
 
-    self.set_status_msg(self._app.get_idle_status_msg())
+    self.set_status_msg(self.app.get_idle_status_msg())
   
+  def on_auth_clicked(self, sender):
+    self.app.evernote_handler.authenticate()
+
+  def set_progress_msg(self, msg):
+    self.set_status_msg(msg, in_progress=True)
+
+  def stop_progress_status(self, msg=None):
+    self.set_status_msg(self.app.get_idle_status_msg() if msg is None else msg, in_progress=False)
+
   def set_status_msg(self, msg, in_progress=False):
     self.label_status.set_text(msg)
     self.status_spinner.set_property('active', in_progress)
     self.status_spinner.set_visible(in_progress)
 
-  def populate_notebooks(self):
-    self.combo_store = Gtk.ListStore(str, str)
-    self.combo_store.append([ALL_NOTEBOOK_ID, 'All Notebooks'])
-    for notebook in self._app.localstore.notebooks.values():
-      self.combo_store.append([notebook.guid, notebook.name])
-
   def _on_sync_clicked(self, sender):
-    self._app.sync()
+    self.app.sync()
 
-  def _on_filter_click(self, sender):
-    self._app.events.emit('sidebar_reveal', sender.get_active())
+  def _on_new_note_click(self, sender):
+    #print self.app.window.get_selected_note_id()
+    pass
 
   def _on_notebook_changed(self, combobox):
     if self.on_after_notebook_changed != None:
@@ -91,15 +99,20 @@ class HeaderBar(Gtk.HeaderBar):
        
   def _build_user_menu(self):
     image = Gtk.Image.new_from_icon_name('avatar-default', Gtk.IconSize.MENU)
-    label = Gtk.Label(label='louis_parengkuan')
+    label = Gtk.Label(label=UserInfo.get_singleton().username)
     arrow = Gtk.Arrow(Gtk.ArrowType.DOWN)
     box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
     box.pack_start(image, False, False, 0)
     box.pack_start(label, False, False, 0)
     box.pack_start(arrow, False, False, 0)
 
+    menu = Gio.Menu()
+    menu.append('Log Out', None)
+
     menu_btn = Gtk.MenuButton()
     menu_btn.add(box)
+    menu_btn.set_menu_model(menu)
+    menu_btn.set_use_popover(True)
     menu_btn.set_relief(Gtk.ReliefStyle.NONE)
     return menu_btn
 

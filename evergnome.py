@@ -4,12 +4,15 @@ import sys
 from gi.repository import GObject, Gdk
 from app import EverGnomeApp
 
-sys.path.append('thirdparty')
+sys.path.append('model')
 sys.path.append('util')
 
 if __name__ == '__main__':
 
-  app = EverGnomeApp()
+  parser = EverGnomeApp.create_arg_parser()
+  args = parser.parse_args()
+
+  app = EverGnomeApp(args)
   
   GObject.threads_init()
   Gdk.threads_enter()

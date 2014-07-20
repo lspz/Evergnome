@@ -5,3 +5,4 @@ evernote=1.25.0
 GtkWebkit
 lxml
 binascii
+dateutil

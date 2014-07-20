@@ -5,6 +5,7 @@ class NoteListBoxRow(Gtk.ListBoxRow):
   def __init__(self, note):
     Gtk.ListBoxRow.__init__(self)
 
+    note.event.connect('updated', self._on_note_updated)
     self.note = note
 
     self._label_title = Gtk.Label(halign=Gtk.Align.START)
@@ -20,13 +21,17 @@ class NoteListBoxRow(Gtk.ListBoxRow):
     box = Gtk.Box(Gtk.Orientation.HORIZONTAL)
     box.set_border_width(5)
     box.pack_start(box_left, True, True, 0)
-    box.pack_end(box_right, False, False, 10)
+    box.pack_end(box_right, False, False, 0)
 
     self.get_style_context().add_class('note-listboxrow')
 
     self.add(box)
     
     self.refresh()
+
+  def _on_note_updated(self, source):
+    self.refresh()
+    self.changed()
 
   def refresh(self):
     # huh? need to decode to plaintext later
@@ -35,7 +40,7 @@ class NoteListBoxRow(Gtk.ListBoxRow):
     self._label_title.get_style_context().add_class('note-listrow-title')
     self._label_desc.set_text(self.note.content_preview)
     self._label_desc.get_style_context().add_class('dim-label')
-    self._label_right.set_text(self.note.updated_desc)
+    self._label_right.set_text(self.note.last_updated_desc)
     self._label_right.get_style_context().add_class('note-listrow-sub')
     
 

@@ -2,42 +2,44 @@ from gi.repository import Gtk, Gdk, GLib
 from notelistview import NoteListView
 from headerbar import HeaderBar
 from noteview import NoteView
-from sidebarlistviews import SidebarView
-from data_models import *
-from consts import EvernoteProcessStatus
+from sidebarview import SidebarView
+from model.data_models import *
+from model.consts import EvernoteProcessStatus
+from util import gtk_util
+from model import error_helper
 
-class SyncResultProcessor:
-  add_func = None
-  delete_func = None
-  update_func = None
 
 class AppWindow(Gtk.ApplicationWindow):
   
   def __init__(self, app):
     Gtk.ApplicationWindow.__init__(self, application=app)
 
+    self._app = app
+
     self.noteview = NoteView(app)
-    self.contentbox = Gtk.Box()
-    self.contentbox.pack_start(self.noteview, True, True, 0)
 
     self.headerbar = HeaderBar(app)
     self.set_titlebar(self.headerbar)
 
-    self.sidebar = SidebarView(app)
+    self.sidebar = SidebarView()
     self.sidebar_revealer = Gtk.Revealer()
     self.sidebar_revealer.add(self.sidebar)
     self.sidebar_revealer.set_reveal_child(True)
     self.sidebar_revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_RIGHT)
 
-    self.notelistview = NoteListView(app.localstore)
+    self.notelistview = NoteListView()
     self.notelistview.load_all()
 
-    paned1 = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
-    paned1.pack1(self.notelistview, resize=True, shrink=False)
-    paned1.pack2(self.contentbox, resize=True, shrink=False)   
+    pane1 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+    pane1.pack_start(Gtk.VSeparator(), False, False, 0)
+    pane1.pack_start(self.noteview, True, True, 0)
+    pane2 = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
+    pane2.pack1(self.notelistview, resize=True, shrink=False)
+    pane2.pack2(pane1, resize=True, shrink=False)   
     main_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
     main_box.pack_start(self.sidebar_revealer, False, False, 0)
-    main_box.pack_start(paned1, True, True, 0)
+    main_box.pack_start(Gtk.VSeparator(), False, False, 0)
+    main_box.pack_start(pane2, True, True, 0)
     
     self.add(main_box)
 
@@ -45,70 +47,89 @@ class AppWindow(Gtk.ApplicationWindow):
     self._init_model_view_links()
 
   def _init_events(self):
-    events = self.get_application().events
-    events.connect('auth_started', self._on_auth_started)
-    events.connect('auth_ended', self._on_auth_ended)
-    events.connect('sync_started', self._on_sync_started)
-    events.connect('sync_progress', self._on_sync_progress)
-    events.connect('sync_ended', self._on_sync_ended)
-    events.connect('notebook_changed', self.notelistview.on_notebook_changed)
-    events.connect('tag_changed', self.notelistview.on_tag_changed)
-    events.connect('sidebar_reveal', self._on_sidebar_reveal)
+
+    # huh? move these to app
+    self._app.evernote_handler.connect('auth_started', self._on_auth_started)
+    self._app.evernote_handler.connect('sync_started', self._on_sync_started)
+    self._app.evernote_handler.connect('sync_progress', self._on_sync_progress)
+    self._app.evernote_handler.connect('sync_ended', self._on_sync_ended)
+    # self._app.evernote_handler.connect('edam_error', self._on_edam_error)
+
+    self._app.evernote_handler.connect('download_resource_started', self._on_download_resource_started)
+    self._app.evernote_handler.connect('download_resource_ended', self._on_download_resource_ended)
+
+    self.headerbar.btn_filter.connect('toggled', self._on_sidebar_reveal)
+
+    self.sidebar.notebooklistview.selection.connect('changed', self.notelistview.on_notebook_changed)
+    self.sidebar.taglistview.selection.connect('changed',  self.notelistview.on_tag_changed)
 
     # huh? we do this because it pass note obj, hence eliminating 1 dict lookup, not sure if worth doing
     self.notelistview.on_note_selected = self.noteview.on_note_selected
 
   def _init_model_view_links(self):
-    # All views here must have: add_obj, update_obj, delete_obj
+    # All views here must have: add_obj
     # huh? should we use classname str as key instead?
     self.model_views = {}
     self.model_views[Note] = self.notelistview
     self.model_views[Notebook] = self.sidebar.notebooklistview
     self.model_views[Tag] = self.sidebar.taglistview
 
-  # huh? wrap with GLib.idle_add?
-  def _on_auth_started(self, sender):
-    self.headerbar.set_status_msg('Authenticating..', in_progress=True)
-
-  def _on_auth_ended(self, sender, result):
-    if result == EvernoteProcessStatus.SUCCESS:
-      msg = self.get_application().get_idle_status_msg()
-    else:
-      msg = 'Authentication Failed'
-    self.headerbar.set_status_msg(msg, in_progress=False)
-
-  def _on_sidebar_reveal(self, sender, reveal):
-    self.sidebar_revealer.set_reveal_child(reveal)
+  def _on_sidebar_reveal(self, sender):
+    self.sidebar_revealer.set_reveal_child(sender.get_active())
 
   def _on_sync_started(self, sender):
-    self.headerbar.set_status_msg('Syncing..', in_progress=True)
+    self.headerbar.set_progress_msg('Syncing..')
 
   def _on_sync_progress(self, sender, msg):
-    self.headerbar.set_status_msg(msg, in_progress=True)
+    self.headerbar.set_progress_msg(msg)
 
-  def _on_sync_ended(self, sender, result):
+  def _on_sync_ended(self, sender, result, message):
     if result == EvernoteProcessStatus.SUCCESS:
-      msg = self.get_application().get_idle_status_msg()
+      msg = None
       self.refresh_after_sync()
     else:
-      msg = 'Sync Failed'
-    self.headerbar.set_status_msg(msg, in_progress=False)
+      msg = 'Sync Failed. ' + message
+    self.headerbar.stop_progress_status(msg)
  
+  def _on_auth_started(self, sender):
+    self.headerbar.set_progress_msg('Authenticating..')
+
+  def _on_download_resource_started(self, sender):
+    self.headerbar.set_progress_msg('Downloading attachment..')
+
+  def _on_download_resource_ended(self, sender, result, resource_guid):
+    if result == EvernoteProcessStatus.SUCCESS:
+      msg = None
+      resource = Resource.get(Resource.guid==resource_guid)
+      if resource is not None:
+        self._app.open_file_external(resource.localpath)
+        
+    else:
+      msg = 'Cannot download attachment'
+    self.headerbar.stop_progress_status(msg)
+
+  # def _on_edam_error(self, sender, errorcode, extra_data):
+  #   GLib.idle_add(
+  #     gtk_util.show_message_dialog,
+  #     error_helper.get_edam_error_msg(errorcode), Gtk.MessageType.ERROR, Gtk.ButtonsType.OK
+  #     )
+
   def refresh_after_sync(self):
-    last_sync_result = self.get_application().localstore.last_sync_result 
+    last_sync_result = self._app.evernote_handler.last_sync_result 
     if last_sync_result is None:
       return
     for obj in last_sync_result.added_list:
-      self.model_views[type(obj)].add_obj(obj)
-    for obj in last_sync_result.updated_list:
-      self.model_views[type(obj)].update_obj(obj) # Refresh obj view
-    for obj in last_sync_result.deleted_list:
-      self.model_views[type(obj)].delete_obj(obj)
-
+      # print obj
+      view = self.model_views.get(type(obj))
+      # print view
+      if view is not None:
+        view.add_obj(obj)
     # self.notelistview.refresh_filter()
-    self.get_application().localstore.last_sync_result = None
+    self._app.evernote_handler.last_sync_result = None
 
-
-
-
+  def get_selected_notebook_id(self):
+    model, treeiter = self.sidebar.notebooklistview.selection.get_selected()
+    if treeiter != None:
+      return model[treeiter][0]
+    return SelectionIdConstant.NONE
 
