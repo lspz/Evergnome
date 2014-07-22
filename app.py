@@ -1,9 +1,3 @@
-# TODO:
-# add stock
-# save last value
-# try mongo
-# show stock detail in a revealer
-# sort out how to use newer ystockquote to get company name
 
 import os
 import threading
@@ -35,7 +29,7 @@ class EverGnomeApp(Gtk.Application):
   def on_activate(self, data=None):
     self.config = AppConfig(APP_CONFIG_PATH)
     self.events = EventController()
-    self.localstore = LocalStore(self.config.db_path)
+    self.localstore = LocalStore(WORKING_DIR + self.config.db_path)
     self.localstore.load()
     self.evernote_handler = EvernoteHandler(self.localstore, self.events)
 

@@ -4,7 +4,7 @@ from evernote.api.client import EvernoteClient
 from data_models import *
 from consts import EvernoteProcessStatus
 
-DEV_TOKEN = 'S=s1:U=8eaf4:E=14da8d27c19:C=1465121501f:P=1cd:A=en-devtoken:V=2:H=56ce86a4c75fdd0f2f655707b57bec95' 
+DEV_TOKEN = '###' 
 CONSUMER_KEY = 'louis-parengkuan'
 CONSUMER_SECRET = '9e1109d8913fbc87'
 MAX_ENTRIES = 100000
