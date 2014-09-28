@@ -14,12 +14,13 @@ from model.configs import AppConfig
 from model.localstore import LocalStore
 from model.evernote_handler import EvernoteHandler
 from model.data_models import SyncState, UserInfo, db_proxy
-from model import db_helper, user_path
+from model import db_helper, user_helper
 
 WORKING_DIR = os.path.dirname(os.path.abspath(__file__)) + '/'
 APP_CONFIG_PATH = WORKING_DIR + 'config.ini'
 CSS_PATH = WORKING_DIR + 'app.css'
 
+# huh? this starts to become more godlike, pull out functionality
 class EverGnomeApp(Gtk.Application):
 
   def __init__(self, args):
@@ -32,21 +33,26 @@ class EverGnomeApp(Gtk.Application):
 
   def on_activate(self, data=None):
     self.config = AppConfig(APP_CONFIG_PATH)
-    self._init_db(user_path.get_db_path())
+    self._init_db(user_helper.get_db_path())
 
     devtoken = open(self.cmd_args.devtoken, 'r').read() if self.cmd_args.devtoken is not None else None 
 
     self.evernote_handler = EvernoteHandler(self, self.config.debug, self.config.sandbox, devtoken)
     if (devtoken is not None) or UserInfo.select().limit(1).exists():
-      self.start_ui()
+      self.start_window()
     else :
       self._do_initial_setup()
 
-  def start_ui(self):
+  def start_window(self):
     self.window = AppWindow(self)
     self.window.show_all()
     self.add_window(self.window)
     self._load_css()
+
+  def stop_window(self):
+    self.remove_window(self.window)
+    self.window.destroy()
+    self.window = None
 
   def sync(self):
     worker = threading.Thread(target=self.evernote_handler.sync)
@@ -73,7 +79,7 @@ class EverGnomeApp(Gtk.Application):
       try:
         # self.evernote_handler.connect('oauth_dlg_opened', self._on_oauth_dlg_opened)
         self.evernote_handler.authenticate()
-        self.start_ui()
+        self.start_window()
       except Exception as e:
         # huh? be more specifi
         print e
@@ -82,10 +88,17 @@ class EverGnomeApp(Gtk.Application):
     else:
       exit()
 
-  # huh? must be better way to do this?
-  # def _on_oauth_dlg_opened(self, sender):
-  #   if self.setup_dlg is not None:
-  #     self.setup_dlg.close()
+  def logout(self):
+    response = show_message_dialog(
+      'Are you sure you want to Log Out? This will remove all saved user data.', 
+      Gtk.MessageType.QUESTION, 
+      Gtk.ButtonsType.YES_NO)
+    if response == Gtk.ResponseType.YES:
+      user_helper.archive_user_data()
+      user_helper.delete_user_data()
+      self.stop_window()
+      self._do_initial_setup()
+        
     
   def _init_db(self, path):
     is_first_time = not os.path.exists(path)

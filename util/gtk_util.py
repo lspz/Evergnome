@@ -6,7 +6,7 @@ def show_message_dialog(msg, message_type, buttons_type):
   flags = Gtk.DialogFlags.MODAL | Gtk.DialogFlags.USE_HEADER_BAR
   dialog = Gtk.MessageDialog(None, flags, message_type, buttons_type, msg)
   response = dialog.run()
-  dialog.hide()
+  dialog.destroy()
   return response
 
 def create_image_button(icon_name, label='', on_click=None, size=Gtk.IconSize.BUTTON, toggle=False):

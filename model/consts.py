@@ -1,5 +1,3 @@
-USER_PATH = '~/.evergnome/'
-RESOURCE_PATH = USER_PATH + 'resource'
 
 CONSUMER_KEY = 'louis-parengkuan'
 CONSUMER_SECRET = '9e1109d8913fbc87'

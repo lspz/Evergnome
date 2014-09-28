@@ -1,4 +1,4 @@
-from gi.repository import Gtk, Gdk, GLib
+from gi.repository import Gtk, Gdk, GLib, Gio
 from notelistview import NoteListView
 from headerbar import HeaderBar
 from noteview import NoteView
@@ -14,7 +14,7 @@ class AppWindow(Gtk.ApplicationWindow):
   def __init__(self, app):
     Gtk.ApplicationWindow.__init__(self, application=app)
 
-    self._app = app
+    self.app = app
 
     self.noteview = NoteView(app)
 
@@ -44,19 +44,20 @@ class AppWindow(Gtk.ApplicationWindow):
     self.add(main_box)
 
     self._init_events()
+    self._init_actions()
     self._init_model_view_links()
 
   def _init_events(self):
 
     # huh? move these to app
-    self._app.evernote_handler.connect('auth_started', self._on_auth_started)
-    self._app.evernote_handler.connect('sync_started', self._on_sync_started)
-    self._app.evernote_handler.connect('sync_progress', self._on_sync_progress)
-    self._app.evernote_handler.connect('sync_ended', self._on_sync_ended)
-    # self._app.evernote_handler.connect('edam_error', self._on_edam_error)
+    self.app.evernote_handler.connect('auth_started', self._on_auth_started)
+    self.app.evernote_handler.connect('sync_started', self._on_sync_started)
+    self.app.evernote_handler.connect('sync_progress', self._on_sync_progress)
+    self.app.evernote_handler.connect('sync_ended', self._on_sync_ended)
+    # self.app.evernote_handler.connect('edam_error', self._on_edam_error)
 
-    self._app.evernote_handler.connect('download_resource_started', self._on_download_resource_started)
-    self._app.evernote_handler.connect('download_resource_ended', self._on_download_resource_ended)
+    self.app.evernote_handler.connect('download_resource_started', self._on_download_resource_started)
+    self.app.evernote_handler.connect('download_resource_ended', self._on_download_resource_ended)
 
     self.headerbar.btn_filter.connect('toggled', self._on_sidebar_reveal)
 
@@ -66,6 +67,12 @@ class AppWindow(Gtk.ApplicationWindow):
     # huh? we do this because it pass note obj, hence eliminating 1 dict lookup, not sure if worth doing
     self.notelistview.on_note_selected = self.noteview.on_note_selected
 
+  def _init_actions(self):
+    action = Gio.SimpleAction.new('logout', None)
+    action.connect('activate', self._on_logout)
+    action.set_enabled(True)
+    self.add_action(action)
+
   def _init_model_view_links(self):
     # All views here must have: add_obj
     # huh? should we use classname str as key instead?
@@ -73,6 +80,9 @@ class AppWindow(Gtk.ApplicationWindow):
     self.model_views[Note] = self.notelistview
     self.model_views[Notebook] = self.sidebar.notebooklistview
     self.model_views[Tag] = self.sidebar.taglistview
+
+  def _on_logout(self, sender, extra):
+    self.app.logout()
 
   def _on_sidebar_reveal(self, sender):
     self.sidebar_revealer.set_reveal_child(sender.get_active())
@@ -102,7 +112,7 @@ class AppWindow(Gtk.ApplicationWindow):
       msg = None
       resource = Resource.get(Resource.guid==resource_guid)
       if resource is not None:
-        self._app.open_file_external(resource.localpath)
+        self.app.open_file_external(resource.localpath)
         
     else:
       msg = 'Cannot download attachment'
@@ -115,7 +125,7 @@ class AppWindow(Gtk.ApplicationWindow):
   #     )
 
   def refresh_after_sync(self):
-    last_sync_result = self._app.evernote_handler.last_sync_result 
+    last_sync_result = self.app.evernote_handler.last_sync_result 
     if last_sync_result is None:
       return
     for obj in last_sync_result.added_list:
@@ -125,7 +135,7 @@ class AppWindow(Gtk.ApplicationWindow):
       if view is not None:
         view.add_obj(obj)
     # self.notelistview.refresh_filter()
-    self._app.evernote_handler.last_sync_result = None
+    self.app.evernote_handler.last_sync_result = None
 
   def get_selected_notebook_id(self):
     model, treeiter = self.sidebar.notebooklistview.selection.get_selected()

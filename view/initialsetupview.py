@@ -23,9 +23,7 @@ class InitialSetupView(Gtk.Dialog):
     self.set_no_show_all(True)
     self.show_all()
 
-  def _on_response(self, sender, response):
-    # if response == Gtk.ResponseType.ACCEPT:
-    #   self.spinner.set_visible(True)
-    #   self.spinner.start()
-    self.close()
+  # def _on_response(self, sender, response):
+
+  #   self.close()
     # pass

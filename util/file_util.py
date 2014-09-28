@@ -1,5 +1,4 @@
 import hashlib
-# import mimetypes
 
 def get_file_hash_hex(path, blocksize=65536):
   afile = open(path, 'rb')
@@ -9,3 +8,7 @@ def get_file_hash_hex(path, blocksize=65536):
     hasher.update(buf)
     buf = afile.read(blocksize)
   return hasher.hexdigest()
+
+# huh? Implement!
+def get_unique_filename(path):
+  return path

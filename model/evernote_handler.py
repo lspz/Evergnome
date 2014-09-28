@@ -51,10 +51,10 @@ class EvernoteHandler(GObject.GObject):
 
   def authenticate(self):
     self.emit('auth_started')
-    if self._devtoken is not None:
-      self.finalize_auth()
-    else:
+    if self.client.token is None:
       self.perform_oauth()
+    else:
+      self.finalize_auth()
 
   def perform_oauth(self):
     request_token = self.client.get_request_token(DUMMY_CALLBACK_URL) 
@@ -80,7 +80,7 @@ class EvernoteHandler(GObject.GObject):
       print 'Saving user info..'
       userstore = self.client.get_user_store()
       auth_user = userstore.getUser() 
-      print auth_user
+      # print auth_users
       user_info = UserInfo.get_singleton()
       user_info.username = auth_user.username
       user_info.name = auth_user.name

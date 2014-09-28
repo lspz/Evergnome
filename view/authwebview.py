@@ -15,6 +15,7 @@ class AuthWebView(Gtk.Dialog):
     self.get_content_area().pack_start(self.webview, True, True, 0)
     self.set_modal(True)
     self.set_size_request(400, 400)
+    self.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
 
   def _on_navigation_requested(self, web_view, frame, request, navigation_action, policy_decision):
     url_parsed = urlparse.urlparse(request.get_uri())
@@ -25,4 +26,4 @@ class AuthWebView(Gtk.Dialog):
       print url_parsed
       if query_args.has_key('oauth_token') and query_args.has_key('oauth_verifier'):
         self.callback_func(token=query_args['oauth_token'], verifier=query_args['oauth_verifier'])
-      self.close()
+      self.destroy()

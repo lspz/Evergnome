@@ -1,6 +1,7 @@
 from gi.repository import Gtk, Gio
 import gtkutils as GtkUtils
 from model.data_models import UserInfo
+from model import user_helper
 from authwebview import AuthWebView # huh?
 
 ALL_NOTEBOOK_ID = 'all'
@@ -99,7 +100,7 @@ class HeaderBar(Gtk.HeaderBar):
        
   def _build_user_menu(self):
     image = Gtk.Image.new_from_icon_name('avatar-default', Gtk.IconSize.MENU)
-    label = Gtk.Label(label=UserInfo.get_singleton().username)
+    label = Gtk.Label(label=user_helper.get_current_username())
     arrow = Gtk.Arrow(Gtk.ArrowType.DOWN)
     box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
     box.pack_start(image, False, False, 0)
@@ -107,7 +108,7 @@ class HeaderBar(Gtk.HeaderBar):
     box.pack_start(arrow, False, False, 0)
 
     menu = Gio.Menu()
-    menu.append('Log Out', None)
+    menu.append('Log Out', 'win.logout')
 
     menu_btn = Gtk.MenuButton()
     menu_btn.add(box)
@@ -115,7 +116,4 @@ class HeaderBar(Gtk.HeaderBar):
     menu_btn.set_use_popover(True)
     menu_btn.set_relief(Gtk.ReliefStyle.NONE)
     return menu_btn
-
-
-
 
