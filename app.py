@@ -5,15 +5,13 @@ import argparse
 import socket
 from gettext import gettext as _
 from gi.repository import Gtk, GLib, Gdk
-from peewee import SqliteDatabase
 from util.time_util import *
 from util.gtk_util import *
 from view.window import AppWindow
 from view.initialsetupview import InitialSetupView
 from model.configs import AppConfig
-from model.localstore import LocalStore
 from model.evernote_handler import EvernoteHandler
-from model.data_models import SyncState, UserInfo, db_proxy
+from model.data_models import SyncState, UserInfo
 from model import db_helper, user_helper
 
 WORKING_DIR = os.path.dirname(os.path.abspath(__file__)) + '/'
@@ -33,7 +31,7 @@ class EverGnomeApp(Gtk.Application):
 
   def on_activate(self, data=None):
     self.config = AppConfig(APP_CONFIG_PATH)
-    self._init_db(user_helper.get_db_path())
+    self.db = db_helper.init_db(user_helper.get_db_path())
 
     devtoken = open(self.cmd_args.devtoken, 'r').read() if self.cmd_args.devtoken is not None else None 
 
@@ -63,7 +61,9 @@ class EverGnomeApp(Gtk.Application):
     worker.start()
 
   def open_file_external(self, path):
-    subprocess.call(["xdg-open", path])
+    if path is not None:
+      # huh? Show some error msg when file is empty
+      subprocess.call(["xdg-open", path])
 
   def get_idle_status_msg(self):
     syncstate = SyncState.get_singleton()
@@ -71,6 +71,9 @@ class EverGnomeApp(Gtk.Application):
       return 'Last sync: ' + evernote_time_to_str(syncstate.sync_time)
     else :
       return ''
+
+  def get_current_username(self):
+    return UserInfo.get_singleton().username
 
   def _do_initial_setup(self):
     self.setup_dlg = InitialSetupView(self)
@@ -94,21 +97,10 @@ class EverGnomeApp(Gtk.Application):
       Gtk.MessageType.QUESTION, 
       Gtk.ButtonsType.YES_NO)
     if response == Gtk.ResponseType.YES:
-      user_helper.archive_user_data()
-      user_helper.delete_user_data()
+      user_helper.archive_user_data(self.get_current_username())
+      user_helper.delete_user_data(self.get_current_username())
       self.stop_window()
       self._do_initial_setup()
-        
-    
-  def _init_db(self, path):
-    is_first_time = not os.path.exists(path)
-    path_dir = os.path.split(path)[0]
-    if is_first_time and (not os.path.exists(path_dir)):
-      os.makedirs(path_dir)
-    self.db = SqliteDatabase(path, check_same_thread=False, autocommit=True)
-    db_proxy.initialize(self.db)
-    if is_first_time:
-      db_helper.recreate_schema()
 
   def _load_css(self):
     css_provider = Gtk.CssProvider()

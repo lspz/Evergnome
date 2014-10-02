@@ -107,7 +107,7 @@ class AppWindow(Gtk.ApplicationWindow):
   def _on_download_resource_started(self, sender):
     self.headerbar.set_progress_msg('Downloading attachment..')
 
-  def _on_download_resource_ended(self, sender, result, resource_guid):
+  def _on_download_resource_ended(self, sender, result, resource_guid, msg):
     if result == EvernoteProcessStatus.SUCCESS:
       msg = None
       resource = Resource.get(Resource.guid==resource_guid)
@@ -116,6 +116,8 @@ class AppWindow(Gtk.ApplicationWindow):
         
     else:
       msg = 'Cannot download attachment'
+      if msg is not None:
+        msg += '. ' + msg
     self.headerbar.stop_progress_status(msg)
 
   # def _on_edam_error(self, sender, errorcode, extra_data):
@@ -125,7 +127,7 @@ class AppWindow(Gtk.ApplicationWindow):
   #     )
 
   def refresh_after_sync(self):
-    last_sync_result = self.app.evernote_handler.last_sync_result 
+    last_sync_result = self.app.evernote_handler.sync_result 
     if last_sync_result is None:
       return
     for obj in last_sync_result.added_list:

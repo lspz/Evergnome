@@ -79,6 +79,7 @@ class NoteView(Gtk.Box):
     self.title_edit.set_editable(True)
     self.title_edit.set_has_frame(False)
     self.title_edit.get_style_context().add_class('note-title')
+    self.title_edit.connect('notify::text', self._on_title_changed)
 
     self.title_view = Gtk.Label(halign=Gtk.Align.START)
     self.title_view.set_selectable(True)
@@ -218,6 +219,9 @@ class NoteView(Gtk.Box):
     else:
       resource.save()
       self._refresh_attachments()
+
+  def _on_title_changed(self, source, param):
+    self.title_view.set_label(source.get_text())
 
   def _on_attachment_clicked(self, source, treeiter, treeviewcol):
     guid = self._attachmentstore[treeiter][0]

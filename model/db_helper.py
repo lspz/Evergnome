@@ -1,3 +1,4 @@
+from peewee import SqliteDatabase
 from data_models import *
 
 def recreate_schema():
@@ -9,12 +10,25 @@ def recreate_schema():
     Notebook.create_table()
   if not Note.table_exists():
     Note.create_table()
+  if not SyncedNoteSnapshot.table_exists():
+    SyncedNoteSnapshot.create_table()
   if not Tag.table_exists():
     Tag.create_table()
   if not TagLink.table_exists():
     TagLink.create_table()
   if not Resource.table_exists():
     Resource.create_table()
+
+def init_db(path):
+  is_first_time = not os.path.exists(path)
+  path_dir = os.path.split(path)[0]
+  if is_first_time and (not os.path.exists(path_dir)):
+    os.makedirs(path_dir)
+  db = SqliteDatabase(path, check_same_thread=False, autocommit=True)
+  db_proxy.initialize(db)
+  if is_first_time:
+      recreate_schema()
+  return db
 
 
 # Handle DB connection and caching

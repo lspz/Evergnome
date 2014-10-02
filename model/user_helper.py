@@ -2,7 +2,6 @@ import os
 import zipfile
 import shutil
 from util import file_util
-from model.data_models import UserInfo
 
 # ~/.evergnome/resource
 # ~/.evergnome/data.db
@@ -20,9 +19,7 @@ def get_resource_path():
 def get_db_path():
   return os.path.join(USER_PATH, DB_NAME)
 
-def archive_user_data(username=None):
-  if username is None:
-    username = get_current_username()
+def archive_user_data():
   output_filename = file_util.get_unique_filename(username + ARCHIVE_EXT)
   output_path = os.path.join(USER_PATH, ARCHIVE_DIR) 
   if not os.path.exists(output_path):
@@ -41,12 +38,12 @@ def archive_user_data(username=None):
   finally:
     zip_file.close()
 
-# huh? impl!
-def delete_user_data(username=None):
-  if username is None:
-    username = get_current_username()
+def delete_user_data():
   shutil.rmtree(get_resource_path())
   os.remove(get_db_path())
 
-def get_current_username():
-  return UserInfo.get_singleton().username
+# huh? impl
+def unarchive_user_data(username):
+  pass
+
+

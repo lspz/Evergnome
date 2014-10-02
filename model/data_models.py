@@ -1,31 +1,24 @@
-import os
-import binascii
-import shutil
-import mimetypes
-import consts
+import os, binascii, shutil, mimetypes
 from lxml.html import html5parser
-from peewee import *
 from gi.repository import GObject
 from datetime import datetime
-from model import user_path
-from util import time_util
-from util.enml_converter import ENMLToHTML, HTMLToENML
-from util.file_util import get_file_hash_hex
+from peewee import *
+from model import consts, user_helper
+from util import time_util, file_util, enml_converter, misc_util
 
 db_proxy = Proxy()
 
 class ObjectStatus:
   CREATED = 'C'
   UPDATED = 'U'
-  DELETED = 'D'
+  DELETED = 'D'  # Need to ensure most views dont display DELETED objects
   SYNCED = 'S' 
 
 class SyncModelPubSub(GObject.GObject):
   __gsignals__ = {
     'updated': (GObject.SIGNAL_RUN_FIRST, None, ()),
     'deleted': (GObject.SIGNAL_RUN_FIRST, None, ())
-  }
-  
+    }
   def __init__(self, model):
     GObject.GObject.__init__(self)
     self.model = model
@@ -58,6 +51,7 @@ class SyncState(BaseSingletonModel):
   update_count = IntegerField(default=0)
   sync_time = IntegerField(default=0)  # server time
 
+# Base class for syncable evernote data type
 class SyncModel(BaseModel):
   guid = CharField(null=True, index=True)
   usn = IntegerField(default=0)
@@ -94,7 +88,6 @@ class SyncModel(BaseModel):
 
   def assign_from_api(self, api_object):
     self.guid = api_object.guid
-    self.object_status = ObjectStatus.SYNCED
     self.update_from_api(api_object)
 
   def get_display_name(self):
@@ -111,15 +104,21 @@ class Notebook(SyncModel):
   def get_display_name(self):
     return self.name + ' (' + str(self.notes.where(Note.deleted_time == None).count()) + ')'
 
-class Note(SyncModel):
+class BaseNote(SyncModel):
   title = CharField()
   content = CharField()
   created_time = IntegerField(default=0)  # huh? why don't we store them as date?
   deleted_time = IntegerField(null=True)
   updated_time = IntegerField(default=0)
   is_active = BooleanField(null=True)
-  notebook = ForeignKeyField(Notebook, related_name='notes')
 
+class SyncedNoteSnapshot(BaseNote):
+  # Declare this separately from Note.notebook as we want to use different related_name
+  notebook = ForeignKeyField(Notebook) 
+
+class Note(BaseNote):
+  notebook = ForeignKeyField(Notebook, related_name='notes')
+  snapshot = ForeignKeyField(SyncedNoteSnapshot, null=True)  
   _embedded_medias_by_hash = None
   _embedded_medias_by_path = None
   _html = None
@@ -151,10 +150,16 @@ class Note(SyncModel):
   def has_tag(self, ids):
     if len(ids) == 0:
       return False
-    for links in self.tag_links:
-      if links.tag.id in ids:
+    for tag in self.tags:
+      if tag.od in ids:
         return True
     return False
+
+  def has_tags_modified(self):
+    return self.tag_links.where(TagLink.object_status != ObjectStatus.SYNCED).exists()
+
+  def has_resources_modified(self):
+    return self.resources.where(Resource.object_status != ObjectStatus.SYNCED).exists()
 
   def is_deleted(self):
     return self.deleted_time is not None;
@@ -169,7 +174,7 @@ class Note(SyncModel):
   def _save_html(self):
     if self._html is None:
       return
-    enml, resource_hashes = HTMLToENML(self.html, self.embedded_medias_by_path)
+    enml, resource_hashes = enml_converter.HTMLToENML(self.html, self.embedded_medias_by_path)
     self.content = enml
     for resource in self.resources.where(Resource.is_attachment==False, Resource.object_status!=ObjectStatus.DELETED):  
       if resource.hash not in resource_hashes:
@@ -181,8 +186,33 @@ class Note(SyncModel):
 
   def _get_html(self):
     if (self._html is None) and (self.content is not None):
-      self._html = ENMLToHTML(self.content.encode('UTF-8'), self.embedded_medias_by_hash)
+      self._html = enml_converter.ENMLToHTML(self.content.encode('UTF-8'), self.embedded_medias_by_hash)
     return self._html
+
+  def _create_snapshot(self):
+    return SyncedNoteSnapshot.create(
+      guid=self.guid,
+      usn=self.usn,
+      object_status=self.object_status,
+      title=self.title,
+      content=self.content,
+      created_time=self.created_time,
+      deleted_time=self.deleted_time,
+      updated_time=self.updated_time,
+      is_active=self.is_active,
+      notebook=self.notebook
+      )
+
+  def maintain_sync_snapshot(self):
+    if self.object_status != ObjectStatus.SYNCED:
+      return
+    if self.snapshot is not None:
+      if self.snapshot.usn < self.usn:
+        self.snapshot.delete_instance()
+      else:
+        return
+    self.snapshot = self._create_snapshot()
+    self.save()
 
   def _get_embedded_medias_by_hash(self):
     if self._embedded_medias_by_hash is None:
@@ -198,14 +228,18 @@ class Note(SyncModel):
         self._embedded_medias_by_path[media.localpath] = media 
     return self._embedded_medias_by_path   
 
+  def _get_tags(self):
+    return Tag.select().join(TagLink).where(TagLink.note==self)
+
   def get_display_name(self):
     return self.title
 
   def get_resource_path(self):
     dir_name = str(self.guid) if self.guid is not None else 'noguid'
-    return os.path.join(os.path.expanduser(user_path.get_resource_path()), dir_name)
+    return os.path.join(os.path.expanduser(user_helper.get_resource_path()), dir_name)
 
   def _get_attachments(self):
+    # huh?
     return self.resources.where(Resource.is_attachment==True)
 
   def _get_content_preview(self):
@@ -228,12 +262,14 @@ class Note(SyncModel):
     for tag_link in self.tag_links:
       tag_link.tag.event.emit('updated')
 
+
   attachments = property(_get_attachments)
   html = property(_get_html, _set_html)
   embedded_medias_by_hash = property(_get_embedded_medias_by_hash)
   embedded_medias_by_path = property(_get_embedded_medias_by_path)
   content_preview = property(_get_content_preview)
   last_updated_desc = property(_get_last_updated_desc)
+  tags = property(_get_tags)
 
 class Resource(SyncModel):
   note = ForeignKeyField(Note, related_name='resources')
@@ -248,10 +284,9 @@ class Resource(SyncModel):
     filename = os.path.split(path)[1]
     ext = os.path.splitext(filename)[1].lower()
     mime = mimetypes.guess_type(path)[0]
-    hash = get_file_hash_hex(path)
+    hash = file_util.get_file_hash_hex(path)
     new_resource = cls(note=note, filename=filename, hash=hash, mime=mime, is_attachment=is_attachment)
     new_resource.assign_from_path(path)
-    # new_resource.save()
     return new_resource
 
   def delete_instance(self, *args, **kwargs):
@@ -278,6 +313,20 @@ class Resource(SyncModel):
       output_file.write(data)
     self.localpath = file_path
 
+  def get_content_data(self):
+    if self.localpath is None:
+      return None
+    with open(self.localpath, 'r') as the_file:
+      return the_file.read()
+
+  def get_content_size(self):
+    if self.localpath is None:
+      return 0
+    return os.path.getsize(self.localpath)
+
+  def get_hash_in_bin(self):
+    return binascii.a2b_hex(self.hash)
+
   def assign_from_path(self, file_path):
     filename = os.path.split(file_path)[1]
     new_path = self._get_unique_resource_path(filename)
@@ -288,16 +337,8 @@ class Resource(SyncModel):
     resource_path = self.note.get_resource_path()
     if not os.path.exists(resource_path):
       os.makedirs(resource_path)
-    # huh? ensure unique filename
-    return os.path.join(resource_path, filename)
+    return file_util.get_unique_filename(os.path.join(resource_path, filename))
 
-
-  # load lazyly, load inline one upon opening note, else on request
-  # def load_data(self, notestore, auth_token):
-  #   if self.localpath:
-  #     return
-  #   api_object = notestore.getResource(auth_token, self.guid, True, False, False, False)
-  #   self._download_resource(api_object.data.body)
 
 class Tag(SyncModel):
   name = CharField()
@@ -314,6 +355,7 @@ class Tag(SyncModel):
 class TagLink(BaseModel):
   tag = ForeignKeyField(Tag, related_name='tag_links')
   note = ForeignKeyField(Note, related_name='tag_links')
+  object_status = CharField(default=ObjectStatus.CREATED)
 
 
 

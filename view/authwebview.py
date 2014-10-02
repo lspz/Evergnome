@@ -1,5 +1,5 @@
-from gi.repository import Gtk, WebKit
 import urlparse
+from gi.repository import Gtk, WebKit
 
 class AuthWebView(Gtk.Dialog):
 

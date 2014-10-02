@@ -1,8 +1,8 @@
 from gi.repository import Gtk, Gio
-import gtkutils as GtkUtils
-from model.data_models import UserInfo
 from model import user_helper
-from authwebview import AuthWebView # huh?
+from model.data_models import UserInfo
+from view.authwebview import AuthWebView # huh?
+from util import gtk_util
 
 ALL_NOTEBOOK_ID = 'all'
 
@@ -19,9 +19,9 @@ class HeaderBar(Gtk.HeaderBar):
     self.props.show_close_button = True
     self.set_custom_title(self._build_title_bar())
 
-    self.btn_filter = GtkUtils.create_image_button('view-list-symbolic', toggle=True)
+    self.btn_filter = gtk_util.create_image_button('view-list-symbolic', toggle=True)
     self.btn_filter.set_active(True)
-    btn_new_note = GtkUtils.create_image_button('list-add-symbolic', label='New Note', on_click=self._on_new_note_click)
+    btn_new_note = gtk_util.create_image_button('list-add-symbolic', label='New Note', on_click=self._on_new_note_click)
     # btn_find = Gtk.Button.new_from_icon_name('edit-find', Gtk.IconSize.BUTTON)
     # self.btn_filter.set_relief(Gtk.ReliefStyle.NONE)
     # btn_new_note.set_relief(Gtk.ReliefStyle.NONE)
@@ -40,7 +40,7 @@ class HeaderBar(Gtk.HeaderBar):
     right_box.pack_end(self._build_user_menu(), False, False, 0)
 
     if app.config.manual_sync:
-      btn_sync = GtkUtils.create_image_button('view-refresh-symbolic', label='Sync')
+      btn_sync = gtk_util.create_image_button('view-refresh-symbolic', label='Sync')
       btn_sync.connect('clicked', self._on_sync_clicked)
       btn_sync.set_relief(Gtk.ReliefStyle.NONE)
       right_box.pack_start(btn_sync, False, False, 0)
@@ -100,7 +100,7 @@ class HeaderBar(Gtk.HeaderBar):
        
   def _build_user_menu(self):
     image = Gtk.Image.new_from_icon_name('avatar-default', Gtk.IconSize.MENU)
-    label = Gtk.Label(label=user_helper.get_current_username())
+    label = Gtk.Label(label=self.app.get_current_username())
     arrow = Gtk.Arrow(Gtk.ArrowType.DOWN)
     box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
     box.pack_start(image, False, False, 0)
