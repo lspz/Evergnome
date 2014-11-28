@@ -19,6 +19,7 @@ class SyncUploaderBase:
       api_obj = self._create_object(db_obj)
       self._update_new_guid(db_obj, api_obj)
       self._update_usn(db_obj, api_obj.updateSequenceNum)
+      self._after_create(db_obj, api_obj)
       db_obj.object_status = ObjectStatus.SYNCED
       print 'Sync #%d: New (upload) %s %s' % (api_obj.updateSequenceNum, self._db_class.__name__, api_obj.guid)
     elif db_obj.object_status == ObjectStatus.UPDATED:
@@ -27,7 +28,7 @@ class SyncUploaderBase:
       db_obj.object_status = ObjectStatus.SYNCED
       print 'Sync #%d: Update (upload) %s %s' % (new_usn, self._db_class.__name__, db_obj.guid)
     db_obj.save()
-    self.after_upload(db_obj)
+    self._after_upload(db_obj)
 
   def _update_new_guid(self, db_obj, api_obj):
     if db_obj.guid != api_obj.guid:
@@ -53,7 +54,10 @@ class SyncUploaderBase:
   def _update_object(self, db_obj):
     return None
 
-  def after_upload(self, db_obj):
+  def _after_create(self, db_obj, api_obj):
+    pass
+
+  def _after_upload(self, db_obj):
     pass
 
 class TagSyncUploader(SyncUploaderBase):
@@ -103,7 +107,9 @@ class NoteSyncUploader(SyncUploaderBase):
 
     # huh? We need to get new usn for new resource so that we can update local rsc's usn
     # and SyncState.usn
+    # huh? we can override update_guid and update_usn
 
+    # huh? is it worth it to only update certain fields given that we have to maintain?
     if db_obj.snapshot is not None:
       if db_obj.content != db_obj.snapshot.content:
         note.content = db_obj.content
@@ -144,6 +150,7 @@ class NoteSyncUploader(SyncUploaderBase):
       api_obj.attributes.attachment = resource.is_attachment
       api_obj.data = ttypes.Data()
       # huh? Tried only including content for modified one. But server complains 
+      #      If we include content for non-modified one, it's a waste of payload.
       api_obj.data.size = resource.get_content_size()
       api_obj.data.bodyHash = resource.get_hash_in_bin()
       if resource.object_status != ObjectStatus.SYNCED:
@@ -163,7 +170,11 @@ class NoteSyncUploader(SyncUploaderBase):
         print 'rsc: %s, filename: %s, usn: %d' % (res.guid, res.attributes.fileName, res.updateSequenceNum)
     return note.updateSequenceNum
 
-  def after_upload(self, db_obj):
+  # huh? assign rsc guid from api, update rsc usn and syncstate usn
+  def _after_create(self, db_obj, api_obj):
+    pass
+
+  def _after_upload(self, db_obj):
     db_obj.maintain_sync_snapshot()
 
     Resource.update(object_status=ObjectStatus.SYNCED).where(Resource.note==db_obj, Resource.object_status==ObjectStatus.CREATED).execute()

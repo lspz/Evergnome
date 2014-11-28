@@ -334,11 +334,11 @@ class Resource(SyncModel):
     self.localpath = new_path
 
   def _get_unique_resource_path(self, filename):
+    filename = file_util.get_valid_filename(filename)
     resource_path = self.note.get_resource_path()
     if not os.path.exists(resource_path):
       os.makedirs(resource_path)
     return file_util.get_unique_filename(os.path.join(resource_path, filename))
-
 
 class Tag(SyncModel):
   name = CharField()

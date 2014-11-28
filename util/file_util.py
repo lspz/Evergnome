@@ -12,3 +12,7 @@ def get_file_hash_hex(path, blocksize=65536):
 # huh? Implement!
 def get_unique_filename(path):
   return path
+
+# huh? Implement! there is this filename: '26/03/2014 8:57:48 pm'
+def get_valid_filename(filename):
+  return filename.replace('/', '-')
