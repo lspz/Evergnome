@@ -114,6 +114,7 @@ class EverGnomeApp(Gtk.Application):
   def create_arg_parser(cls):
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--devtoken', required=False, help='File containing the devtoken')
+    parser.add_argument('-rm', '--removeuserdata', action='store_true', required=False, help='Remove all user data')
     return parser
 
 

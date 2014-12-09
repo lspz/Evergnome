@@ -1,3 +1,4 @@
+import binascii
 from data_models import *
 from evernote.edam.type import ttypes
 
@@ -23,12 +24,12 @@ class SyncUploaderBase:
       db_obj.object_status = ObjectStatus.SYNCED
       print 'Sync #%d: New (upload) %s %s' % (api_obj.updateSequenceNum, self._db_class.__name__, api_obj.guid)
     elif db_obj.object_status == ObjectStatus.UPDATED:
-      new_usn = self._update_object(db_obj)
+      new_usn, api_obj = self._update_object(db_obj)
       self._update_usn(db_obj, new_usn)
       db_obj.object_status = ObjectStatus.SYNCED
       print 'Sync #%d: Update (upload) %s %s' % (new_usn, self._db_class.__name__, db_obj.guid)
     db_obj.save()
-    self._after_upload(db_obj)
+    self._after_upload(db_obj, api_obj)
 
   def _update_new_guid(self, db_obj, api_obj):
     if db_obj.guid != api_obj.guid:
@@ -41,23 +42,27 @@ class SyncUploaderBase:
     db_obj.usn = new_usn
     self.sync_result.last_update_count = new_usn
 
+  def _get_dirty_objects_query(self):
+    return self._db_class.select().where(self._db_class.object_status != ObjectStatus.SYNCED)
+
   def get_dirty_objects(self):
     if self._dirty_objects is None:
-      self._dirty_objects = self._db_class.select().where(self._db_class.object_status != ObjectStatus.SYNCED)
+      self._dirty_objects = self._get_dirty_objects_query()
     return self._dirty_objects
 
   # Returns new api_obj
   def _create_object(self, db_obj):
     return None
 
-  # Returns new USN
+  # Expected to returns tuple of (new_usn, api_obj). Although Note returns api_obj
   def _update_object(self, db_obj):
     return None
 
   def _after_create(self, db_obj, api_obj):
     pass
 
-  def _after_upload(self, db_obj):
+  # Careful here, only note returns api_ob
+  def _after_upload(self, db_obj, api_obj):
     pass
 
 class TagSyncUploader(SyncUploaderBase):
@@ -75,8 +80,8 @@ class TagSyncUploader(SyncUploaderBase):
     return self._notestore.createTag(self._authtoken, self._create_api_object(db_obj))
 
   def _update_object(self, db_obj):
-    return self._notestore.updateTag(self._authtoken, self._create_api_object(db_obj))
-
+    usn = self._notestore.updateTag(self._authtoken, self._create_api_object(db_obj))
+    return (usn, None)
 
 class NotebookSyncUploader(SyncUploaderBase):
 
@@ -93,8 +98,8 @@ class NotebookSyncUploader(SyncUploaderBase):
     return self._notestore.createNotebook(self._authtoken, self._create_api_object(db_obj))
 
   def _update_object(self, db_obj):
-    return self._notestore.updateNotebook(self._authtoken, self._create_api_object(db_obj))
-
+    usn = self._notestore.updateNotebook(self._authtoken, self._create_api_object(db_obj))
+    return (usn, None)
 
 class NoteSyncUploader(SyncUploaderBase):
 
@@ -105,42 +110,24 @@ class NoteSyncUploader(SyncUploaderBase):
     note.guid = db_obj.guid
     note.title = db_obj.title
 
-    # huh? We need to get new usn for new resource so that we can update local rsc's usn
-    # and SyncState.usn
-    # huh? we can override update_guid and update_usn
+    note.content = db_obj.content
+    note.notebookGuid = db_obj.notebook.guid
+    note.tagGuids = [tag.guid for tag in db_obj.tags]
+    note.resources = self.get_resource_list(db_obj)
+    note.created = db_obj.created_time
+    note.updated = db_obj.updated_time
+    note.deleted = db_obj.deleted_time
+    note.active = db_obj.is_active
 
-    # huh? is it worth it to only update certain fields given that we have to maintain?
-    if db_obj.snapshot is not None:
-      if db_obj.content != db_obj.snapshot.content:
-        note.content = db_obj.content
-      if db_obj.notebook != db_obj.snapshot.notebook:
-        note.notebookGuid = db_obj.notebook.guid
-      if db_obj.created_time != db_obj.snapshot.created_time:
-        note.created = db_obj.created_time
-      if db_obj.updated_time != db_obj.snapshot.updated_time:
-        note.updated = db_obj.updated_time
-      if db_obj.deleted_time != db_obj.snapshot.deleted_time:
-        note.deleted = db_obj.deleted_time
-      if db_obj.is_active != db_obj.snapshot.is_active:
-        note.active = db_obj.is_active
-      if db_obj.has_tags_modified():
-        note.tagGuids = [tag.guid for tag in db_obj.tags]
-      if db_obj.has_resources_modified():
-        note.resources = self.get_resource_list(db_obj)
-    else:
-      note.content = db_obj.content
-      note.notebookGuid = db_obj.notebook.guid
+    if db_obj.has_tags_modified():
       note.tagGuids = [tag.guid for tag in db_obj.tags]
+    if db_obj.has_resources_modified():
       note.resources = self.get_resource_list(db_obj)
-      note.created = db_obj.created_time
-      note.updated = db_obj.updated_time
-      note.deleted = db_obj.deleted_time
-      note.active = db_obj.is_active
     return note   
 
   def get_resource_list(self, note):
     result = []
-    for resource in note.resources:
+    for resource in note.resources.where(Resource.object_status!=ObjectStatus.DELETED):
       api_obj = ttypes.Resource()
       api_obj.guid = resource.guid
       api_obj.noteGuid = resource.guid
@@ -155,7 +142,6 @@ class NoteSyncUploader(SyncUploaderBase):
       api_obj.data.bodyHash = resource.get_hash_in_bin()
       if resource.object_status != ObjectStatus.SYNCED:
         api_obj.data.body = resource.get_content_data()
-      print 'rscX: %s, filename: %s, usn: %d ' % (resource.guid, resource.filename, resource.usn)
       result.append(api_obj)
     return result
 
@@ -165,20 +151,25 @@ class NoteSyncUploader(SyncUploaderBase):
 
   def _update_object(self, db_obj):
     note = self._notestore.updateNote(self._authtoken, self._create_api_object(db_obj))
-    if note.resources is not None:
-      for res in note.resources:
-        print 'rsc: %s, filename: %s, usn: %d' % (res.guid, res.attributes.fileName, res.updateSequenceNum)
-    return note.updateSequenceNum
+    return (note.updateSequenceNum, note)
 
-  # huh? assign rsc guid from api, update rsc usn and syncstate usn
-  def _after_create(self, db_obj, api_obj):
-    pass
-
-  def _after_upload(self, db_obj):
-    db_obj.maintain_sync_snapshot()
-
+  def _after_upload(self, db_obj, api_obj):
+    # Update new resources
+    for db_rsc in db_obj.resources.where(Resource.object_status==ObjectStatus.CREATED):
+      for api_rsc in api_obj.resources:
+        if binascii.hexlify(api_rsc.data.bodyHash) == db_rsc.hash:
+          db_rsc.guid = api_rsc.guid
+          db_rsc.usn = api_rsc.updateSequenceNum
+          db_rsc.save()
+          self.sync_result.last_update_count = max(self.sync_result.last_update_count, api_rsc.updateSequenceNum)
+    
+    # Update/Delete linked objects
     Resource.update(object_status=ObjectStatus.SYNCED).where(Resource.note==db_obj, Resource.object_status==ObjectStatus.CREATED).execute()
     Resource.delete().where(Resource.note==db_obj, Resource.object_status==ObjectStatus.DELETED).execute()
-    
     TagLink.update(object_status=ObjectStatus.SYNCED).where(TagLink.note==db_obj, TagLink.object_status==ObjectStatus.CREATED).execute()
     TagLink.delete().where(TagLink.note==db_obj, TagLink.object_status==ObjectStatus.DELETED).execute()
+
+  def _get_dirty_objects_query(self):
+    dirty_notes = Note.select().where(Note.object_status != ObjectStatus.SYNCED)
+    notes_with_dirty_resources = Note.select().distinct().join(Resource).where(Resource.object_status != ObjectStatus.SYNCED)
+    return dirty_notes | notes_with_dirty_resources

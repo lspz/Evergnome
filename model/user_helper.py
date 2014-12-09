@@ -39,7 +39,7 @@ def archive_user_data():
     zip_file.close()
 
 def delete_user_data():
-  shutil.rmtree(get_resource_path())
+  shutil.rmtree(get_resource_path(), ignore_errors=True)
   os.remove(get_db_path())
 
 # huh? impl

@@ -79,7 +79,6 @@ class NoteUpdater(SyncUpdater):
       api_obj = self._notestore.getNote(self._authtoken, api_obj.guid, True,  False,  False, False) 
     SyncUpdater._do_update(self, db_obj, api_obj)
     self._update_tags(db_obj, api_obj)
-    db_obj.maintain_sync_snapshot()
 
   def _update_tags(self, db_obj, api_obj):
     db_tag_guids = []

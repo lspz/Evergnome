@@ -95,7 +95,6 @@ class EvernoteHandler(GObject.GObject):
       print 'Saving user info..'
       userstore = self.client.get_user_store()
       auth_user = userstore.getUser() 
-      # print auth_users
       user_info = UserInfo.get_singleton()
       user_info.username = auth_user.username
       user_info.name = auth_user.name
@@ -107,7 +106,6 @@ class EvernoteHandler(GObject.GObject):
     if self._debug:
       self._do_sync()
       return
-
     try:
       self._do_sync()
     except (EDAMUserException, EDAMSystemException) as e:

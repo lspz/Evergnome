@@ -148,7 +148,7 @@ class NoteView(Gtk.Box):
 
   def _create_attachment_box(self):
     # ID, Label, Icon
-    self._attachmentstore = Gtk.ListStore(str, str, str)  
+    self._attachmentstore = Gtk.ListStore(int, str, str)  
 
     cell_renderer_icon = Gtk.CellRendererPixbuf()
     col_icon = Gtk.TreeViewColumn()
@@ -202,7 +202,7 @@ class NoteView(Gtk.Box):
     self._attachmentstore.clear()
     for attachment in self.note.attachments:
       self._attachmentstore.append([
-        attachment.guid, 
+        attachment.id, 
         attachment.filename, 
         gtk_util.get_mime_icon_name(attachment.filename)])
     self.attachmentbox.set_expanded(count < 3)
@@ -224,8 +224,8 @@ class NoteView(Gtk.Box):
     self.title_view.set_label(source.get_text())
 
   def _on_attachment_clicked(self, source, treeiter, treeviewcol):
-    guid = self._attachmentstore[treeiter][0]
-    db_obj = Resource.get(Resource.guid==guid)
+    rsc_id = self._attachmentstore[treeiter][0]
+    db_obj = Resource.get(Resource.id==rsc_id)
     if db_obj is not None:
       if db_obj.localpath is None:
         self.app.download_resource(db_obj)

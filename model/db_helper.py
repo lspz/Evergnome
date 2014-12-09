@@ -10,8 +10,6 @@ def recreate_schema():
     Notebook.create_table()
   if not Note.table_exists():
     Note.create_table()
-  if not SyncedNoteSnapshot.table_exists():
-    SyncedNoteSnapshot.create_table()
   if not Tag.table_exists():
     Tag.create_table()
   if not TagLink.table_exists():

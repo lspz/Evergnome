@@ -104,21 +104,14 @@ class Notebook(SyncModel):
   def get_display_name(self):
     return self.name + ' (' + str(self.notes.where(Note.deleted_time == None).count()) + ')'
 
-class BaseNote(SyncModel):
+class Note(SyncModel):
   title = CharField()
   content = CharField()
   created_time = IntegerField(default=0)  # huh? why don't we store them as date?
   deleted_time = IntegerField(null=True)
   updated_time = IntegerField(default=0)
   is_active = BooleanField(null=True)
-
-class SyncedNoteSnapshot(BaseNote):
-  # Declare this separately from Note.notebook as we want to use different related_name
-  notebook = ForeignKeyField(Notebook) 
-
-class Note(BaseNote):
-  notebook = ForeignKeyField(Notebook, related_name='notes')
-  snapshot = ForeignKeyField(SyncedNoteSnapshot, null=True)  
+  notebook = ForeignKeyField(Notebook, related_name='notes')  
   _embedded_medias_by_hash = None
   _embedded_medias_by_path = None
   _html = None
@@ -188,31 +181,6 @@ class Note(BaseNote):
     if (self._html is None) and (self.content is not None):
       self._html = enml_converter.ENMLToHTML(self.content.encode('UTF-8'), self.embedded_medias_by_hash)
     return self._html
-
-  def _create_snapshot(self):
-    return SyncedNoteSnapshot.create(
-      guid=self.guid,
-      usn=self.usn,
-      object_status=self.object_status,
-      title=self.title,
-      content=self.content,
-      created_time=self.created_time,
-      deleted_time=self.deleted_time,
-      updated_time=self.updated_time,
-      is_active=self.is_active,
-      notebook=self.notebook
-      )
-
-  def maintain_sync_snapshot(self):
-    if self.object_status != ObjectStatus.SYNCED:
-      return
-    if self.snapshot is not None:
-      if self.snapshot.usn < self.usn:
-        self.snapshot.delete_instance()
-      else:
-        return
-    self.snapshot = self._create_snapshot()
-    self.save()
 
   def _get_embedded_medias_by_hash(self):
     if self._embedded_medias_by_hash is None:
@@ -296,9 +264,9 @@ class Resource(SyncModel):
 
   def update_from_api(self, api_object):
     super(Resource, self).update_from_api(api_object)
-    # we dont update the note here
+    # We dont update the note here
     self.mime = api_object.mime
-    self.hash = binascii.b2a_hex(api_object.data.bodyHash)
+    self.hash = binascii.hexlify(api_object.data.bodyHash)
     self.filename = api_object.attributes.fileName
     self.is_attachment = False if api_object.attributes.attachment is None else api_object.attributes.attachment  
     self.note = Note.select().where(Note.guid==api_object.noteGuid).get()
@@ -325,7 +293,7 @@ class Resource(SyncModel):
     return os.path.getsize(self.localpath)
 
   def get_hash_in_bin(self):
-    return binascii.a2b_hex(self.hash)
+    return binascii.unhexlify(self.hash)
 
   def assign_from_path(self, file_path):
     filename = os.path.split(file_path)[1]
