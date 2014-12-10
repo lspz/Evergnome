@@ -8,7 +8,6 @@ class SidebarView(Gtk.Box):
 
     self.notebooklistview = NotebookListView()
     self.notebooklistview.load_all()
-    # self.notebooklistview.set_valign(Gtk.Align.START)
     self.taglistview = TagListView()
     self.taglistview.load_all()
 
@@ -17,22 +16,6 @@ class SidebarView(Gtk.Box):
     self.pack_end(self.taglistview, False, False, 0)
 
     self.get_style_context().add_class('sidebar')
-    # self.taglistview.set_valign(Gtk.Align.START)
-    # btn_reveal = Gtk.Button('')
-    # btn_reveal.get_style_context().add_class('btn-reveal')
-    # btn_reveal.set_relief(Gtk.ReliefStyle.HALF)
-
-    # vbox = Gtk.Paned(orientation=Gtk.Orientation.VERTICAL)
-    # vbox.pack1(self.notebooklistview, resize=True, shrink=False)
-    # vbox.pack2(self.taglistview, resize=True, shrink=False)
-
-    # paned1 = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
-    # paned1.pack1(self.notelistview, resize=True, shrink=False)
-    # paned1.pack2(self.contentbox, resize=True, shrink=False)   
-    # self.pack_end(Gtk.HSeparator(), True, False, 0)
-    # self.pack_start(vbox, True, True, 0)
-    # self.set_margin_left(5)
-    # self.set_margin_right(5)
 
 
 class BaseSidebarListView(Gtk.Box):
@@ -71,10 +54,10 @@ class BaseSidebarListView(Gtk.Box):
 
     self.selection = self._listview.get_selection()
     self.selection.set_mode(self._selection_mode)
-    # self.selection.connect('changed', self._on_selection_changed)
 
     scrollbox = Gtk.ScrolledWindow()
     scrollbox.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+    scrollbox.set_min_content_height(150)
     scrollbox.add(self._listview)
 
     self.revealer = Gtk.Revealer()
@@ -136,20 +119,6 @@ class BaseSidebarListView(Gtk.Box):
       self.add_obj(obj)
     if treeiter is not None:
       self._listview.get_selection().select_iter(treeiter)
-
-  # # def _on_selection_changed(self, self.selection):
-  # #   if self._selection_mode == Gtk.SelectionMode.MULTIPLE:
-  # #     treepaths, model = selection.get_selected_rows()
-  # #     # huh? iterate selected rows
-  # #     # for treepath in treepaths:
-  # #     obj_id = treepaths[0][0]
-  #     self._events.emit(self._change_event_name, obj_id)
-
-  # #   else:
-  # #     model, treeiter = selection.get_selected()
-  # #     if treeiter != None:
-  # #       obj_id = model[treeiter][0]
-  #       self._events.emit(self._change_event_name, obj_id)
   
   # Common model interface
   def add_obj(self, obj):

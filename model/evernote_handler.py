@@ -134,7 +134,10 @@ class EvernoteHandler(GObject.GObject):
     # Unlike downloading changes, we do one transaction per objects (see _process_objects_to_upload)
     # As sending transaction to server cannot be rolledback, hence we want
     # to ensure local db is as closely synced to server in case of failure 
-    self.upload_changes()
+    
+    # huh? Bypass upload for REAL data for now. This is scary
+    if self.app.config.sandbox:
+      self.upload_changes()
 
     SyncState.get_singleton().save()
 

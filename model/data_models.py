@@ -144,7 +144,7 @@ class Note(SyncModel):
     if len(ids) == 0:
       return False
     for tag in self.tags:
-      if tag.od in ids:
+      if tag.id in ids:
         return True
     return False
 
@@ -317,7 +317,7 @@ class Tag(SyncModel):
     self.name = api_object.name
     # cant assign parent_tag now
   def get_display_name(self):
-    return self.name + ' (' + str(self.tag_links.where(Note.deleted_time==None).count()) + ')'
+    return self.name + ' (' + str(self.tag_links.join(Note).where(Note.deleted_time==None).count()) + ')'
 
 
 class TagLink(BaseModel):
