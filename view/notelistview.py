@@ -1,33 +1,35 @@
+import datetime
 from gi.repository import Gtk, Gdk, GLib, Gio
 from notelistboxrow import NoteListBoxRow
 from model.consts import SelectionIdConstant
-from model.data_models import Notebook, Note
+from model.data_models import Notebook, Note, ObjectStatus
+from util import time_util
 
+# Must always call show_all() on listbox everytime add new row
 class NoteListView(Gtk.Box):
 
   on_note_selected = None
   _rows = {}
-  _listbox = None
+  listbox = None
   _notebook_id = SelectionIdConstant.NONE
   _tag_ids = []
-  # add_obj = None
-  # delete_obj = None
-  # update_obj = None
 
-  def __init__(self):
+  def __init__(self, app):
     Gtk.Box.__init__(self)
 
     self.set_orientation(Gtk.Orientation.VERTICAL)
 
-    self._listbox = Gtk.ListBox()
-    self._listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
-    self._listbox.set_filter_func(self._filter_listbox, None)
-    self._listbox.connect('row-selected', self._on_row_selected)
-    self._listbox.get_style_context().add_class('note-listbox')
+    self.app = app
+
+    self.listbox = Gtk.ListBox()
+    self.listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
+    self.listbox.set_filter_func(self._filter_listbox, None)
+    self.listbox.connect('row-selected', self._on_row_selected)
+    self.listbox.get_style_context().add_class('note-listbox')
 
     scrollbox = Gtk.ScrolledWindow()
     scrollbox.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-    scrollbox.add(self._listbox)
+    scrollbox.add(self.listbox)
     # scrollbox.set_size_request(400, 400)
 
     self.pack_start(self._create_header(), False, False, 0)
@@ -65,9 +67,28 @@ class NoteListView(Gtk.Box):
   # huh? this doesnt works well after sync
   def add_obj(self, note):
     row = NoteListBoxRow(note)
-    self._listbox.prepend(row)  
+    self.listbox.prepend(row)  
     self._rows[note.id] = row
     note.event.connect('deleted', self._on_note_deleted)
+    return row
+
+  def add_new_note(self):
+    selected_notebook_id = self.app.window.get_selected_notebook_id() 
+    if selected_notebook_id == SelectionIdConstant.NONE:
+      notebook = self.app.evernote_handler.get_default_notebook()
+    else: 
+      notebook = Notebook.select().where(Notebook.id==selected_notebook_id).get() 
+
+    now_datetime = time_util.local_datetime_to_evernote_time(datetime.datetime.now())
+    new_note = Note.create(
+      title = 'Untitled',
+      created_time = now_datetime,
+      updated_time = now_datetime,
+      notebook = notebook
+      )
+    row = self.add_obj(new_note)
+    self.listbox.show_all()
+    self.listbox.select_row(row)
 
   def _on_note_deleted(self, source):
     self.remove_row(source.model)
@@ -75,24 +96,24 @@ class NoteListView(Gtk.Box):
   # Most of the time we wouldn't go here as note is not likely to be expunged
   def remove_row(self, note):
     row = self._rows[note.id]
-    self._listbox.remove(row)
+    self.listbox.remove(row)
     del self._rows[note.id]
 
   def refresh_filter(self):
-    self._listbox.invalidate_filter()  
+    self.listbox.invalidate_filter()  
 
   def on_notebook_changed(self, selection):
     model, treeiter = selection.get_selected()
     if treeiter != None:
       self._notebook_id = model[treeiter][0]
       self._refresh_header()
-      self._listbox.invalidate_filter()
+      self.refresh_filter()
 
   def on_tag_changed(self, selection):
     del self._tag_ids[:]
     selection.selected_foreach(self._add_to_tag_ids)
     self._refresh_header()
-    self._listbox.invalidate_filter()    
+    self.refresh_filter()    
 
   def _add_to_tag_ids(self, model, treepath, treeiter):
     self._tag_ids.append(model[treeiter][0])
@@ -113,14 +134,15 @@ class NoteListView(Gtk.Box):
     if self._notebook_id == SelectionIdConstant.TRASH:
       return note.is_deleted()
 
-    return (
+    # print note.title
+    result = (
       (not note.is_deleted()) and
       ( (self._notebook_id == SelectionIdConstant.NONE) or (note.notebook.id == self._notebook_id) ) and 
       ( (len(self._tag_ids) == 0 ) or (note.has_tag(self._tag_ids)) )
     )
-
-    # print 'result = ' + str(result)
-    # return result
+    if note.object_status == ObjectStatus.CREATED:
+      print note.title + ' ' + str(result)
+    return result
 
   def _on_row_selected(self, sender, listboxrow):
     if self.on_note_selected != None:
@@ -139,5 +161,5 @@ class NoteListView(Gtk.Box):
   #     row.refresh()
   #     row.changed()
   #     # huh? This doesn't work, webkit doesnt refresh and crash when selecting other note
-  #     if row == self._listbox.get_selected_row():
-  #       self._on_row_selected(self._listbox, row)  
+  #     if row == self.listbox.get_selected_row():
+  #       self._on_row_selected(self.listbox, row)  

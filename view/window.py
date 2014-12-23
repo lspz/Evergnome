@@ -1,4 +1,5 @@
 from gi.repository import Gtk, Gdk, GLib, Gio
+from evernote.edam.error.ttypes import EDAMErrorCode
 from notelistview import NoteListView
 from headerbar import HeaderBar
 from noteview import NoteView
@@ -27,7 +28,7 @@ class AppWindow(Gtk.ApplicationWindow):
     self.sidebar_revealer.set_reveal_child(True)
     self.sidebar_revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_RIGHT)
 
-    self.notelistview = NoteListView()
+    self.notelistview = NoteListView(app)
     self.notelistview.load_all()
 
     pane1 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -54,7 +55,9 @@ class AppWindow(Gtk.ApplicationWindow):
     self.app.evernote_handler.connect('sync_started', self._on_sync_started)
     self.app.evernote_handler.connect('sync_progress', self._on_sync_progress)
     self.app.evernote_handler.connect('sync_ended', self._on_sync_ended)
-    # self.app.evernote_handler.connect('edam_error', self._on_edam_error)
+    
+    # huh? Cannot use signal as it crashes somehow
+    self.app.evernote_handler.on_edam_error = self._on_edam_error
 
     self.app.evernote_handler.connect('download_resource_started', self._on_download_resource_started)
     self.app.evernote_handler.connect('download_resource_ended', self._on_download_resource_ended)
@@ -66,6 +69,7 @@ class AppWindow(Gtk.ApplicationWindow):
 
     # huh? we do this because it pass note obj, hence eliminating 1 dict lookup, not sure if worth doing
     self.notelistview.on_note_selected = self.noteview.on_note_selected
+
 
   def _init_actions(self):
     action = Gio.SimpleAction.new('logout', None)
@@ -120,23 +124,27 @@ class AppWindow(Gtk.ApplicationWindow):
         msg += '. ' + msg
     self.headerbar.stop_progress_status(msg)
 
-  # def _on_edam_error(self, sender, errorcode, extra_data):
-  #   GLib.idle_add(
-  #     gtk_util.show_message_dialog,
-  #     error_helper.get_edam_error_msg(errorcode), Gtk.MessageType.ERROR, Gtk.ButtonsType.OK
-  #     )
+  def _on_edam_error(self, errorcode, extra_data=''):
+    if errorcode == EDAMErrorCode.AUTH_EXPIRED: 
+      response = gtk_util.show_message_dialog(
+        'Your authentication token has expired. Please re-authenticate again.', 
+        Gtk.MessageType.QUESTION, 
+        Gtk.ButtonsType.OK_CANCEL)
+
+      # huh? THis crashes after returning from evernote
+      if response == Gtk.ResponseType.OK:
+        self.app.evernote_handler.perform_oauth()
 
   def refresh_after_sync(self):
     last_sync_result = self.app.evernote_handler.sync_result 
     if last_sync_result is None:
       return
     for obj in last_sync_result.added_list:
-      # print obj
       view = self.model_views.get(type(obj))
-      # print view
       if view is not None:
         view.add_obj(obj)
-    # self.notelistview.refresh_filter()
+    self.app.window.notelistview.listbox.show_all()
+    # self.app.window.notelistview.refresh_filter()
     self.app.evernote_handler.last_sync_result = None
 
   def get_selected_notebook_id(self):

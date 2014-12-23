@@ -126,6 +126,7 @@ class BaseSidebarListView(Gtk.Box):
     obj.event.connect('updated', self._on_list_obj_updated)
     obj.event.connect('deleted', self._on_list_obj_deleted)
 
+  # huh? This doesnt work?
   def _on_list_obj_updated(self, event):
     obj = event.model
     _iter = self._listiters.get(obj.id)

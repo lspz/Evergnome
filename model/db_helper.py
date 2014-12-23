@@ -1,21 +1,14 @@
 from peewee import SqliteDatabase
 from data_models import *
+from user_helper import get_db_path
+
+ALL_TABLE = [UserInfo, SyncState, Notebook, Note, Resource, Tag, TagLink]
+SYNCABLE_MODEL = [Notebook, Note, Resource, Tag, TagLink]
 
 def recreate_schema():
-  if not UserInfo.table_exists():
-    UserInfo.create_table()
-  if not SyncState.table_exists():
-    SyncState.create_table()
-  if not Notebook.table_exists():
-    Notebook.create_table()
-  if not Note.table_exists():
-    Note.create_table()
-  if not Tag.table_exists():
-    Tag.create_table()
-  if not TagLink.table_exists():
-    TagLink.create_table()
-  if not Resource.table_exists():
-    Resource.create_table()
+  for table in ALL_TABLE:
+    if not table.table_exists():
+      table.create_table()
 
 def init_db(path):
   is_first_time = not os.path.exists(path)
@@ -28,6 +21,12 @@ def init_db(path):
       recreate_schema()
   return db
 
+def clean_cache():
+  init_db(user_helper.get_db_path())
+  for model in SYNCABLE_MODEL:
+    query = model.delete().where(model.object_status != ObjectStatus.SYNCED)
+    count = query.execute() 
+    print 'Deleted ' + str(count) + ' ' + model.__name__
 
 # Handle DB connection and caching
 # class LocalStore:

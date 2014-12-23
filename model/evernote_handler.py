@@ -1,4 +1,4 @@
-from gi.repository import GObject
+from gi.repository import GObject, GLib
 from evernote.edam.error.ttypes import EDAMUserException, EDAMSystemException
 from evernote.edam.notestore.ttypes import SyncChunkFilter#NoteFilter, NotesMetadataResultSpec
 from evernote.api.client import EvernoteClient
@@ -8,6 +8,7 @@ from model.sync_downloader import *
 from model.sync_uploader import *
 from model.consts import EvernoteProcessStatus, MAX_ENTRIES, CONSUMER_KEY, CONSUMER_SECRET
 from view.authwebview import AuthWebView
+from util import gtk_util
 
 DUMMY_CALLBACK_URL = 'redirect-to-evergnome.com'
 
@@ -26,6 +27,7 @@ class EvernoteHandler(GObject.GObject):
   auth_user = None
   sync_result = None
   is_authenticated = False
+  on_edam_error = None
 
   __gsignals__ = {
     'auth_started': (GObject.SIGNAL_RUN_FIRST, None, ()),
@@ -103,21 +105,20 @@ class EvernoteHandler(GObject.GObject):
       user_info.save()
 
   def sync(self):
-    if self._debug:
-      self._do_sync()
-      return
+    # if self._debug:
+    #   self._do_sync()
+    #   return
     try:
       self._do_sync()
     except (EDAMUserException, EDAMSystemException) as e:
-      print e
-      self.emit('edam_error', e.errorCode, '')
+      if self.on_edam_error is not None:
+        GLib.idle_add(self.on_edam_error, e.errorCode)
       self.emit('sync_ended', EvernoteProcessStatus.SYNC_ERROR, error_helper.get_edam_error_msg(e.errorCode))
     except IOError as e:
       self.emit('sync_ended', EvernoteProcessStatus.SYNC_ERROR, 'Please check your connection.')
     except Exception as e:
       self.emit('sync_ended', EvernoteProcessStatus.SYNC_ERROR, ' ')
       print e
-
 
   def _do_sync(self):
     if not self.is_authenticated:
@@ -136,8 +137,8 @@ class EvernoteHandler(GObject.GObject):
     # to ensure local db is as closely synced to server in case of failure 
     
     # huh? Bypass upload for REAL data for now. This is scary
-    if self.app.config.sandbox:
-      self.upload_changes()
+    # if self.app.config.sandbox:
+    self.upload_changes()
 
     SyncState.get_singleton().save()
 
@@ -206,17 +207,18 @@ class EvernoteHandler(GObject.GObject):
     notebook_uploader = NotebookSyncUploader(self.notestore, self.client.token, self.sync_result)
     note_uploader = NoteSyncUploader(self.notestore, self.client.token, self.sync_result)
 
-    self._total_upload = tag_uploader.get_dirty_objects().count()
-    self._total_upload += notebook_uploader.get_dirty_objects().count()  
-    self._total_upload += note_uploader.get_dirty_objects().count()
-
+    # huh? Debug
+    print 'Testing upload. NOT A REAL RUN'
+    self._total_upload = tag_uploader.get_dirty_objects().wrapped_count()
+    self._total_upload += notebook_uploader.get_dirty_objects().wrapped_count()  
+    self._total_upload += note_uploader.get_dirty_objects().wrapped_count()
     print 'Total objects to upload: ' + str(self._total_upload)
 
-    self._process_objects_to_upload(tag_uploader)
-    self._process_objects_to_upload(notebook_uploader)
-    self._process_objects_to_upload(note_uploader)
-    if self.sync_result.last_update_count is not None:
-      SyncState.get_singleton().update_count = self.sync_result.last_update_count
+    # self._process_objects_to_upload(tag_uploader)
+    # self._process_objects_to_upload(notebook_uploader)
+    # self._process_objects_to_upload(note_uploader)
+    # if self.sync_result.last_update_count is not None:
+    #   SyncState.get_singleton().update_count = self.sync_result.last_update_count
     
   def _process_objects_to_upload(self, uploader):
     with self.app.db.transaction():
@@ -257,8 +259,24 @@ class EvernoteHandler(GObject.GObject):
 
   def _get_notestore(self):
     if self._notestore is None:
+      if not self.is_authenticated:
+        self.authenticate()
       self._notestore = self.client.get_note_store()  
     return self._notestore
+
+  def get_default_notebook(self):
+    query = Notebook.select().where(Notebook.is_default==True)
+    if query.exists():
+      return query.get()
+    
+    if not self.is_authenticated:
+      self.authenticate()
+    
+    api_obj = self.notestore.getDefaultNotebook(self.client.token)
+    db_obj = Notebook.select().where(Notebook.guid==api_obj.guid).get()
+    db_obj.is_default = True
+    db_obj.save()
+    return db_obj
 
   notestore = property(_get_notestore) 
 

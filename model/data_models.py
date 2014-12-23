@@ -105,12 +105,14 @@ class Notebook(SyncModel):
     return self.name + ' (' + str(self.notes.where(Note.deleted_time == None).count()) + ')'
 
 class Note(SyncModel):
+  DEFAULT_CONTENT = '<en-note></en-note>'
+
   title = CharField()
-  content = CharField()
+  content = CharField(default=DEFAULT_CONTENT)
   created_time = IntegerField(default=0)  # huh? why don't we store them as date?
-  deleted_time = IntegerField(null=True)
+  deleted_time = IntegerField(null=True, default=None)
   updated_time = IntegerField(default=0)
-  is_active = BooleanField(null=True)
+  is_active = BooleanField(null=True, default=True)
   notebook = ForeignKeyField(Notebook, related_name='notes')  
   _embedded_medias_by_hash = None
   _embedded_medias_by_path = None

@@ -21,20 +21,11 @@ class HeaderBar(Gtk.HeaderBar):
 
     self.btn_filter = gtk_util.create_image_button('view-list-symbolic', toggle=True)
     self.btn_filter.set_active(True)
-    btn_new_note = gtk_util.create_image_button('list-add-symbolic', label='New Note', on_click=self._on_new_note_click)
-    # btn_find = Gtk.Button.new_from_icon_name('edit-find', Gtk.IconSize.BUTTON)
-    # self.btn_filter.set_relief(Gtk.ReliefStyle.NONE)
-    # btn_new_note.set_relief(Gtk.ReliefStyle.NONE)
-    # btn_find.set_relief(Gtk.ReliefStyle.NONE)
+    btn_new_note = gtk_util.create_image_button('list-add-symbolic', label='New Note', on_click=self._on_new_note_clicked)
 
     left_box = Gtk.Box(Gtk.Orientation.HORIZONTAL, spacing=5, valign=Gtk.Align.CENTER)
     left_box.pack_start(self.btn_filter, False, False, 0)
     left_box.pack_start(btn_new_note, False, False, 0)
-
-    # btn_auth = Gtk.Button(label='auth')
-    # btn_auth.connect('clicked', self.on_auth_clicked)
-    # left_box.pack_start(btn_auth, False, False, 0)
-    # left_box.pack_start(btn_find, False, False, 0)
 
     right_box = Gtk.Box(Gtk.Orientation.HORIZONTAL, spacing=5, valign=Gtk.Align.CENTER)
     right_box.pack_end(self._build_user_menu(), False, False, 0)
@@ -49,9 +40,6 @@ class HeaderBar(Gtk.HeaderBar):
     self.pack_end(right_box)
 
     self.set_status_msg(self.app.get_idle_status_msg())
-  
-  def on_auth_clicked(self, sender):
-    self.app.evernote_handler.authenticate()
 
   def set_progress_msg(self, msg):
     self.set_status_msg(msg, in_progress=True)
@@ -63,13 +51,12 @@ class HeaderBar(Gtk.HeaderBar):
     self.label_status.set_text(msg)
     self.status_spinner.set_property('active', in_progress)
     self.status_spinner.set_visible(in_progress)
+  
+  def _on_new_note_clicked(self, sender):
+    self.app.window.notelistview.add_new_note()
 
   def _on_sync_clicked(self, sender):
     self.app.sync()
-
-  def _on_new_note_click(self, sender):
-    #print self.app.window.get_selected_note_id()
-    pass
 
   def _on_notebook_changed(self, combobox):
     if self.on_after_notebook_changed != None:

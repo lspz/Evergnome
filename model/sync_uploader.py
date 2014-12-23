@@ -48,6 +48,7 @@ class SyncUploaderBase:
   def get_dirty_objects(self):
     if self._dirty_objects is None:
       self._dirty_objects = self._get_dirty_objects_query()
+    print self._dirty_objects
     return self._dirty_objects
 
   # Returns new api_obj
