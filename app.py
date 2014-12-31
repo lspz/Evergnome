@@ -1,3 +1,4 @@
+import sys
 import os.path
 import threading
 import subprocess
@@ -12,7 +13,7 @@ from view.initialsetupview import InitialSetupView
 from model.configs import AppConfig
 from model.evernote_handler import EvernoteHandler
 from model.data_models import SyncState, UserInfo
-from model import db_helper, user_helper
+from model import db_helper, user_helper  
 
 WORKING_DIR = os.path.dirname(os.path.abspath(__file__)) + '/'
 APP_CONFIG_PATH = WORKING_DIR + 'config.ini'
@@ -21,9 +22,11 @@ CSS_PATH = WORKING_DIR + 'app.css'
 # huh? this starts to become more godlike, pull out functionality
 class EverGnomeApp(Gtk.Application):
 
-  def __init__(self, args):
+  def __init__(self):
     Gtk.Application.__init__(self)
-    self.cmd_args = args
+
+    parser = self._create_arg_parser()
+    self.cmd_args = parser.parse_args() 
 
     GLib.set_application_name(_("EverGnome"))
     GLib.set_prgname('EverGnome')   
@@ -110,13 +113,28 @@ class EverGnomeApp(Gtk.Application):
       css_provider, 
       Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
-  @classmethod
-  def create_arg_parser(cls):
+  def _create_arg_parser(self):
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--devtoken', required=False, help='File containing the devtoken')
-    parser.add_argument('-rm', '--removeuserdata', action='store_true', required=False, help='Remove all user data')
+    parser.add_argument('-rm', '--removeuserdata', action='store_true', required=False, help='Remove user data')
+    parser.add_argument('-au', '--archiveuserdata', action='store_true', required=False, help='Archive user data')
+    parser.add_argument('-ua', '--unarchiveuserdata', type=str, required=False, help='UnArchive user data')
+    
     parser.add_argument('-cc', '--cleancache', action='store_true', required=False, help='Clean/Delete all unsynced objects')
     return parser
+
+  def handle_commands(self):
+    exit = True
+    if self.cmd_args.removeuserdata:
+      user_helper.delete_user_data()
+    elif self.cmd_args.cleancache:
+      db_helper.clean_cache()
+    else:
+      exit = False 
+
+    # huh? add archiving
+    if exit:
+      sys.exit(0)
 
 
 

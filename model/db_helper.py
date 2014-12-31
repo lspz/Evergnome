@@ -21,10 +21,11 @@ def init_db(path):
       recreate_schema()
   return db
 
+# huh? This only deletes new stuff
 def clean_cache():
   init_db(user_helper.get_db_path())
   for model in SYNCABLE_MODEL:
-    query = model.delete().where(model.object_status != ObjectStatus.SYNCED)
+    query = model.delete().where(model.object_status == ObjectStatus.CREATED)
     count = query.execute() 
     print 'Deleted ' + str(count) + ' ' + model.__name__
 
