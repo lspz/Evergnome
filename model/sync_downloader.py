@@ -4,8 +4,9 @@ from data_models import *
 
 class SyncDownloaderBase:
   
-  def __init__(self, class_type, sync_result):
-    self._db_class = class_type 
+  def __init__(self, localstore, db_class, sync_result):
+    self._localstore = localstore
+    self._db_class = db_class 
     self.sync_result = sync_result 
 
   def process(self, data):
@@ -16,34 +17,72 @@ class SyncDownloaderBase:
 
   def _handle_conflict(self, db_obj, api_obj):
     self.sync_result.conflict_list.append((db_obj, api_obj))
+
+    # To be implemented by subclass
+  def _get_db_obj(self, guid):
+    return None
   
 # This deals with expunged object
 class SyncDeleter(SyncDownloaderBase):
 
-  def __init__(self, class_type, sync_result, recursive=False):
-    SyncDownloaderBase.__init__(self, class_type, sync_result)
+  def __init__(self, localstore, db_class, sync_result, recursive=False):
+    SyncDownloaderBase.__init__(self, localstore, db_class, sync_result)
     self._recursive = recursive
 
   def process(self, data):
     if isinstance(data, basestring):
       guid = data
-    else: # huh? Assume that we pass evernote api obj 
+    else: # Assume that we pass evernote api obj 
       guid = data.guid
-    query = self._db_class.select().where(self._db_class.guid==guid)  # huh? bulk load this
-    if query.exists():
-      db_obj = query.get()
+    db_obj = self._get_db_obj(guid)  # huh? bulk load this
+    if db_obj is not None:
       print 'Sync : Delete %s %s' % (self._db_class.__name__, db_obj.guid)
       if self._has_conflict(db_obj, None):
         self._handle_conflict(db_obj, None)
         return
       self._deleted_list.append(db_obj)
+      self._delete_db_obj(db_obj)
       db_obj.delete_instance(recursive=self._recursive)
     # huh? handle else?
 
+  # To be imlemented by subclass
+  def _delete_db_obj(self, db_obj):
+    pass
+
+class NoteDeleter(SyncDeleter):
+  def __init__(self, localstore, sync_result):
+    SyncDeleter.__init__(self, localstore, Note, sync_result, recursive=True)
+
+  def _get_db_obj(self, guid):
+    return self._localstore.notes_by_guid.get(guid)
+
+  def _delete_db_obj(self, db_obj):
+    self._localstore.delete_note(db_obj)
+
+class NotebookDeleter(SyncDeleter):
+  def __init__(self, localstore, sync_result):
+    SyncDeleter.__init__(self, localstore, Notebook, sync_result)
+
+  def _get_db_obj(self, guid):
+    return self._localstore.notebooks_by_guid.get(guid)
+
+  def _delete_db_obj(self, db_obj):
+    self._localstore.delete_notebook(db_obj)
+
+class TagDeleter(SyncDeleter):
+  def __init__(self, localstore, sync_result):
+    SyncDeleter.__init__(self, localstore, Tag, sync_result)
+
+  def _get_db_obj(self, guid):
+    return self._localstore.tags_by_guid.get(guid)
+
+  def _delete_db_obj(self, db_obj):
+    self._localstore.delete_tag(db_obj)
+
 class SyncUpdater(SyncDownloaderBase):
 
-  def __init__(self, class_type, notestore, authtoken, sync_result):
-    SyncDownloaderBase.__init__(self, class_type, sync_result)
+  def __init__(self, localstore, db_class, notestore, authtoken, sync_result):
+    SyncDownloaderBase.__init__(self, localstore, db_class, sync_result)
     self._notestore = notestore
     self._authtoken = authtoken
 
@@ -52,24 +91,49 @@ class SyncUpdater(SyncDownloaderBase):
     db_obj.save()
 
   def process(self, api_obj):
-    query = self._db_class.select().where(self._db_class.guid==api_obj.guid)  # huh? bulk load this
-    if not query.exists():
+    db_obj = self._get_db_obj(api_obj.guid)
+    if db_obj is None:
       print 'Sync #%d: New %s %s' % (api_obj.updateSequenceNum, self._db_class.__name__, api_obj.guid)
       db_obj = self._db_class()
       self.sync_result.added_list.append(db_obj)
       self._do_update(db_obj, api_obj)
+      self._add_db_obj(db_obj)
     else:
       print 'Sync #%d: Update %s %s' % (api_obj.updateSequenceNum, self._db_class.__name__, api_obj.guid)
-      db_obj = query.get()
       if api_obj.updateSequenceNum > db_obj.usn:
         if self._has_conflict(db_obj, api_obj):
           self._handle_conflict(db_obj, api_obj)
           return
         self._do_update(db_obj, api_obj)
 
+  # To be implemented by subclass
+  def _add_db_obj(self, db_obj):
+    pass
+
+
+class TagUpdater(SyncUpdater):
+  def __init__(self, localstore, notestore, authtoken, sync_result):
+    SyncUpdater.__init__(self, localstore, Tag, notestore, authtoken, sync_result)
+
+  def _get_db_obj(self, guid):
+    return self._localstore.tags_by_guid.get(guid)
+
+  def _add_db_obj(self, db_obj):
+    self._localstore.add_tag(db_obj)
+
+class NotebookUpdater(SyncUpdater):
+  def __init__(self, localstore, notestore, authtoken, sync_result):
+    SyncUpdater.__init__(self, localstore, Notebook, notestore, authtoken, sync_result)
+
+  def _get_db_obj(self, guid):
+    return self._localstore.notebooks_by_guid.get(guid)
+
+  def _add_db_obj(self, db_obj):
+    self._localstore.add_notebook(db_obj)
+
 class NoteUpdater(SyncUpdater):
-  def __init__(self, notestore, authtoken, sync_result):
-    SyncUpdater.__init__(self, Note, notestore, authtoken, sync_result)
+  def __init__(self, localstore, notestore, authtoken, sync_result):
+    SyncUpdater.__init__(self, localstore, Note, notestore, authtoken, sync_result)
 
   def _has_conflict(self, db_obj, api_obj):
     return SyncUpdater._has_conflict(self, db_obj, api_obj) or (db_obj.updated_time > api_obj.updated)
@@ -93,9 +157,15 @@ class NoteUpdater(SyncUpdater):
           tag = Tag.select().where(Tag.guid==api_tag_guid)
           new_link = TagLink.create(note=db_obj, tag=tag)
 
+  def _get_db_obj(self, guid):
+    return self._localstore.notes_by_guid.get(guid)
+
+  def _add_db_obj(self, db_obj):
+    self._localstore.add_note(db_obj)
+
 class ResourceUpdater(SyncUpdater):
-  def __init__(self, notestore, authtoken, sync_result):
-    SyncUpdater.__init__(self, Resource, notestore, authtoken, sync_result)
+  def __init__(self, localstore, notestore, authtoken, sync_result):
+    SyncUpdater.__init__(self, localstore, Resource, notestore, authtoken, sync_result)
 
   def _do_update(self, db_obj, api_obj):
     SyncUpdater._do_update(self, db_obj, api_obj)
@@ -104,3 +174,9 @@ class ResourceUpdater(SyncUpdater):
       resource_data = self._notestore.getResourceData(self._authtoken, api_obj.guid)
       db_obj.assign_from_bin(resource_data)
       db_obj.save()
+
+  def _get_db_obj(self, guid):
+    return self._localstore.resources_by_guid.get(guid)
+
+  def _add_db_obj(self, db_obj):
+    self._localstore.add_resource(db_obj)     

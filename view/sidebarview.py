@@ -3,12 +3,12 @@ from model.consts import SelectionIdConstant
 from model.data_models import Notebook, Tag
 
 class SidebarView(Gtk.Box):
-  def __init__(self):
+  def __init__(self, app):
     Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
 
-    self.notebooklistview = NotebookListView()
+    self.notebooklistview = NotebookListView(app)
     self.notebooklistview.load_all()
-    self.taglistview = TagListView()
+    self.taglistview = TagListView(app)
     self.taglistview.load_all()
 
     self.pack_start(self.notebooklistview, True, True, 0)
@@ -25,11 +25,11 @@ class BaseSidebarListView(Gtk.Box):
   _trash_label = 'Trash'
   
 
-  def __init__(self, classtype, selection_mode, header_label='', selection_all_label='', item_icon_name='', item_all_icon_name=''):
+  def __init__(self, db_objects, selection_mode, header_label='', selection_all_label='', item_icon_name='', item_all_icon_name=''):
     Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
 
     self._selection_mode = selection_mode
-    self._classtype = classtype 
+    self._db_objects = db_objects 
     self._header_label = header_label
     self._selection_all_label = selection_all_label
     self._item_icon_name = item_icon_name
@@ -115,7 +115,7 @@ class BaseSidebarListView(Gtk.Box):
     treeiter = None
     if self._selection_mode != Gtk.SelectionMode.MULTIPLE:
       treeiter = self._liststore.append([SelectionIdConstant.NONE, self._selection_all_label, self._item_all_icon_name])
-    for obj in self._classtype.select():
+    for obj in self._db_objects:
       self.add_obj(obj)
     if treeiter is not None:
       self._listview.get_selection().select_iter(treeiter)
@@ -140,10 +140,10 @@ class BaseSidebarListView(Gtk.Box):
       self._liststore.remove(_iter)
 
 class NotebookListView(BaseSidebarListView):
-  def __init__(self):
+  def __init__(self, app):
     BaseSidebarListView.__init__(
       self,
-      classtype = Notebook, 
+      db_objects = app.localstore.notebooks.itervalues(), 
       selection_mode = Gtk.SelectionMode.BROWSE,
       header_label = 'Notebooks',
       selection_all_label = 'All Notes',
@@ -155,10 +155,10 @@ class NotebookListView(BaseSidebarListView):
     self._liststore.append([SelectionIdConstant.TRASH, self._trash_label, 'user-trash-symbolic'])
 
 class TagListView(BaseSidebarListView):
-  def __init__(self):
+  def __init__(self, app):
     BaseSidebarListView.__init__(
       self,
-      classtype = Tag, 
+      db_objects = app.localstore.tags.itervalues(), 
       selection_mode = Gtk.SelectionMode.MULTIPLE,
       header_label = 'Tags',
       item_icon_name = 'folder-tag',

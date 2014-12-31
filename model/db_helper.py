@@ -1,6 +1,5 @@
 from peewee import SqliteDatabase
 from data_models import *
-from user_helper import get_db_path
 
 ALL_TABLE = [UserInfo, SyncState, Notebook, Note, Resource, Tag, TagLink]
 SYNCABLE_MODEL = [Notebook, Note, Resource, Tag, TagLink]
@@ -22,8 +21,8 @@ def init_db(path):
   return db
 
 # huh? This only deletes new stuff
-def clean_cache():
-  init_db(user_helper.get_db_path())
+def clean_cache(path):
+  init_db(path)
   for model in SYNCABLE_MODEL:
     query = model.delete().where(model.object_status == ObjectStatus.CREATED)
     count = query.execute() 

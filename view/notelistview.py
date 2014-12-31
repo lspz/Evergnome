@@ -61,10 +61,9 @@ class NoteListView(Gtk.Box):
     return header_box
 
   def load_all(self):
-    for note in Note.select():
+    for note in self.app.localstore.notes.itervalues():
       self.add_obj(note)
 
-  # huh? this doesnt works well after sync
   def add_obj(self, note):
     row = NoteListBoxRow(note)
     self.listbox.prepend(row)  
@@ -74,6 +73,7 @@ class NoteListView(Gtk.Box):
 
   def add_new_note(self):
     selected_notebook_id = self.app.window.get_selected_notebook_id() 
+    # huh? get from localstore instead of querying
     if selected_notebook_id == SelectionIdConstant.NONE:
       notebook = self.app.evernote_handler.get_default_notebook()
     else: 
@@ -86,6 +86,7 @@ class NoteListView(Gtk.Box):
       updated_time = now_datetime,
       notebook = notebook
       )
+    self.app.localstore.add_note(new_note)
     row = self.add_obj(new_note)
     self.listbox.show_all()
     self.listbox.select_row(row)

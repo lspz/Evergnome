@@ -22,7 +22,7 @@ class AppWindow(Gtk.ApplicationWindow):
     self.headerbar = HeaderBar(app)
     self.set_titlebar(self.headerbar)
 
-    self.sidebar = SidebarView()
+    self.sidebar = SidebarView(app)
     self.sidebar_revealer = Gtk.Revealer()
     self.sidebar_revealer.add(self.sidebar)
     self.sidebar_revealer.set_reveal_child(True)

@@ -13,7 +13,8 @@ from view.initialsetupview import InitialSetupView
 from model.configs import AppConfig
 from model.evernote_handler import EvernoteHandler
 from model.data_models import SyncState, UserInfo
-from model import db_helper, user_helper  
+from model.localstore import LocalStore
+from model import db_helper, user_helper
 
 WORKING_DIR = os.path.dirname(os.path.abspath(__file__)) + '/'
 APP_CONFIG_PATH = WORKING_DIR + 'config.ini'
@@ -34,12 +35,18 @@ class EverGnomeApp(Gtk.Application):
 
   def on_activate(self, data=None):
     self.config = AppConfig(APP_CONFIG_PATH)
-    self.db = db_helper.init_db(user_helper.get_db_path())
+    self.localstore = LocalStore(user_helper.get_db_path())
 
     devtoken = open(self.cmd_args.devtoken, 'r').read() if self.cmd_args.devtoken is not None else None 
 
-    self.evernote_handler = EvernoteHandler(self, self.config.debug, self.config.sandbox, devtoken)
+    self.evernote_handler = EvernoteHandler(
+      self.localstore, 
+      debug=self.config.debug, 
+      sandbox=self.config.sandbox, 
+      devtoken=devtoken)
+    
     if (devtoken is not None) or UserInfo.select().limit(1).exists():
+      self.localstore.load()
       self.start_window()
     else :
       self._do_initial_setup()
@@ -128,7 +135,7 @@ class EverGnomeApp(Gtk.Application):
     if self.cmd_args.removeuserdata:
       user_helper.delete_user_data()
     elif self.cmd_args.cleancache:
-      db_helper.clean_cache()
+      db_helper.clean_cache(user_helper.get_db_path())
     else:
       exit = False 
 

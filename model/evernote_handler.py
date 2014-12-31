@@ -22,6 +22,7 @@ class SyncResult:
 
 
 class EvernoteHandler(GObject.GObject):
+  _localstore = None
   _notestore = None
   _debug = False
   auth_user = None
@@ -39,11 +40,13 @@ class EvernoteHandler(GObject.GObject):
     'download_resource_ended': (GObject.SIGNAL_RUN_FIRST, None, (int, str, str))
   }
 
-  def __init__(self, app, debug=False, sandbox=True, devtoken=None):
+  def __init__(self, localstore, debug=False, sandbox=True, devtoken=None):
     GObject.GObject.__init__(self)
-    self.app = app
+    self._localstore = localstore
     self._debug = debug
     self._devtoken = devtoken
+
+    print 'Initiating evernote client. debug=%s sandbox=%s' % (debug, sandbox)
 
     auth_token = UserInfo.get_singleton().auth_token if self._devtoken is None else self._devtoken
     self.client = EvernoteClient(
@@ -61,7 +64,7 @@ class EvernoteHandler(GObject.GObject):
       if resource_data is not None:
         resource_db_obj.assign_from_bin(resource_data)
         resource_db_obj.save()
-        self.app.db.commit()
+        self._localstore.db.commit()
       self.emit('download_resource_ended', EvernoteProcessStatus.SUCCESS, resource_db_obj.guid, '')
     except Exception, e:
       print e
@@ -105,9 +108,10 @@ class EvernoteHandler(GObject.GObject):
       user_info.save()
 
   def sync(self):
-    # if self._debug:
-    #   self._do_sync()
-    #   return
+    if self._debug:
+      self._do_sync()
+      return
+
     try:
       self._do_sync()
     except (EDAMUserException, EDAMSystemException) as e:
@@ -129,7 +133,7 @@ class EvernoteHandler(GObject.GObject):
     self.emit('sync_started')
     self.sync_result = SyncResult()
 
-    with self.app.db.transaction(): # Auto transaction handling
+    with self._localstore.db.transaction(): # Auto transaction handling
       self.download_changes()
       
     # Unlike downloading changes, we do one transaction per objects (see _process_objects_to_upload)
@@ -165,10 +169,10 @@ class EvernoteHandler(GObject.GObject):
     self._download_counter = 0
     self._total_download = syncchunk.updateCount - syncstate_db_obj.update_count
 
-    tag_updater = SyncUpdater(Tag, self.notestore, self.client.token, self.sync_result)
-    notebook_updater = SyncUpdater(Notebook, self.notestore, self.client.token, self.sync_result)
-    note_updater = NoteUpdater(self.notestore, self.client.token, self.sync_result)
-    resource_updater = ResourceUpdater(self.notestore, self.client.token, self.sync_result)
+    tag_updater = TagUpdater(localstore=self._localstore, notestore=self.notestore, authtoken=self.client.token, sync_result=self.sync_result)
+    notebook_updater = NotebookUpdater(localstore=self._localstore, notestore=self.notestore, authtoken=self.client.token, sync_result=self.sync_result)
+    note_updater = NoteUpdater(localstore=self._localstore, notestore=self.notestore, authtoken=self.client.token, sync_result=self.sync_result)
+    resource_updater = ResourceUpdater(localstore=self._localstore, notestore=self.notestore, authtoken=self.client.token, sync_result=self.sync_result)
 
     # Order is important
     self._process_download_list(tag_updater, syncchunk.tags)    
@@ -176,9 +180,9 @@ class EvernoteHandler(GObject.GObject):
     self._process_download_list(note_updater, syncchunk.notes)    
     self._process_download_list(resource_updater, syncchunk.resources)   
 
-    note_deleter = SyncDeleter(Note, self.sync_result, recursive=True)
-    notebook_deleter = SyncDeleter(Notebook, self.sync_result)
-    tag_deleter = SyncDeleter(Tag, self.sync_result)
+    note_deleter = NoteDeleter(localstore=self._localstore, sync_result=self.sync_result)
+    notebook_deleter = NotebookDeleter(localstore=self._localstore, sync_result=self.sync_result)
+    tag_deleter = TagDeleter(localstore=self._localstore, sync_result=self.sync_result)
 
     self._process_download_list(note_deleter, syncchunk.expungedNotes)    
     self._process_download_list(notebook_deleter, syncchunk.expungedNotebooks)    
@@ -221,7 +225,7 @@ class EvernoteHandler(GObject.GObject):
     #   SyncState.get_singleton().update_count = self.sync_result.last_update_count
     
   def _process_objects_to_upload(self, uploader):
-    with self.app.db.transaction():
+    with self._localstore.db.transaction():
       for db_obj in uploader.get_dirty_objects():
         self._update_upload_progress()
         uploader.process(db_obj)
