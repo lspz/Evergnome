@@ -15,6 +15,7 @@ from model.evernote_handler import EvernoteHandler
 from model.data_models import SyncState, UserInfo
 from model.localstore import LocalStore
 from model import db_helper, user_helper
+from controller import WindowController
 
 WORKING_DIR = os.path.dirname(os.path.abspath(__file__)) + '/'
 APP_CONFIG_PATH = WORKING_DIR + 'config.ini'
@@ -54,6 +55,7 @@ class EverGnomeApp(Gtk.Application):
   def start_window(self):
     self.window = AppWindow(self)
     self.window.show_all()
+    self.controller = WindowController(self, self.window)
     self.add_window(self.window)
     self._load_css()
 
@@ -61,10 +63,6 @@ class EverGnomeApp(Gtk.Application):
     self.remove_window(self.window)
     self.window.destroy()
     self.window = None
-
-  def sync(self):
-    worker = threading.Thread(target=self.evernote_handler.sync)
-    worker.start()
 
   def download_resource(self, db_obj):
     worker = threading.Thread(target=self.evernote_handler.download_resource, args=[db_obj])

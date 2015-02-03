@@ -28,7 +28,7 @@ class NoteView(Gtk.Box):
     # scrollbox.set_border_width(3)
 
     # huh? implement disable edit
-    self.btn_edit = gtk_util.create_image_button('edit-symbolic', ' Edit', on_click=self._on_edit_click, size=Gtk.IconSize.BUTTON)
+    self.btn_edit = gtk_util.create_button(icon='edit-symbolic', label=' Edit', on_click=self._on_edit_click, size=Gtk.IconSize.BUTTON)
     self.btn_edit.set_halign(Gtk.Align.END)
     self.btn_edit.set_valign(Gtk.Align.START)
     self.btn_edit.set_margin_top(10)
@@ -85,16 +85,6 @@ class NoteView(Gtk.Box):
     self.title_view.set_selectable(True)
     self.title_view.get_style_context().add_class('note-title')    
 
-    # self.title_stack = Gtk._Stack()
-    # self.title_stack.add_named(self.title_edit, 'title_edit')
-    # self.title_stack.add_named(self.title_view, 'title_view')
-    # self.title_stack.set_visible_child_name('title_view')
-    # self.title_edit.get_style_context().add_class('opaque')
-    #self.title_edit.set_has_frame(False)
-    # self.title_edit.modify_font(Pango.FontDescription('Size 12'))
-    #btn_edit = gtk_util.create_image_DND('edit-symbolic', label='Edit', on_click=self._on_edit_click, toggle=True)
-    #btn_info = gtk_util.create_image_button('dialog-information-symbolic', label='Info', on_click=None, toggle=True)
-    #btn_remove.set_relief(Gtk.ReliefStyle.NONE)
     btn_detail = Gtk.LinkButton(label='Detail')
     btn_detail.get_style_context().add_class('opaque')
     btn_detail.set_relief(Gtk.ReliefStyle.NONE)

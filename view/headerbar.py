@@ -19,9 +19,10 @@ class HeaderBar(Gtk.HeaderBar):
     self.props.show_close_button = True
     self.set_custom_title(self._build_title_bar())
 
-    self.btn_filter = gtk_util.create_image_button('view-list-symbolic', toggle=True)
+    self.btn_filter = gtk_util.create_button(icon='view-list-symbolic', toggle=True)
     self.btn_filter.set_active(True)
-    btn_new_note = gtk_util.create_image_button('list-add-symbolic', label='New Note', on_click=self._on_new_note_clicked)
+
+    btn_new_note = gtk_util.create_button(icon='list-add-symbolic', label='New Note', action='win.new_note')
 
     left_box = Gtk.Box(Gtk.Orientation.HORIZONTAL, spacing=5, valign=Gtk.Align.CENTER)
     left_box.pack_start(self.btn_filter, False, False, 0)
@@ -31,8 +32,7 @@ class HeaderBar(Gtk.HeaderBar):
     right_box.pack_end(self._build_user_menu(), False, False, 0)
 
     if app.config.manual_sync:
-      btn_sync = gtk_util.create_image_button('view-refresh-symbolic', label='Sync')
-      btn_sync.connect('clicked', self._on_sync_clicked)
+      btn_sync = gtk_util.create_button(icon='view-refresh-symbolic', label='Sync', action='win.sync')
       btn_sync.set_relief(Gtk.ReliefStyle.NONE)
       right_box.pack_start(btn_sync, False, False, 0)
 
@@ -41,7 +41,7 @@ class HeaderBar(Gtk.HeaderBar):
 
     self.set_status_msg(self.app.get_idle_status_msg())
 
-  def set_progress_msg(self, msg):
+  def set_progress_status(self, msg):
     self.set_status_msg(msg, in_progress=True)
 
   def stop_progress_status(self, msg=None):
@@ -51,12 +51,6 @@ class HeaderBar(Gtk.HeaderBar):
     self.label_status.set_text(msg)
     self.status_spinner.set_property('active', in_progress)
     self.status_spinner.set_visible(in_progress)
-  
-  def _on_new_note_clicked(self, sender):
-    self.app.window.notelistview.add_new_note()
-
-  def _on_sync_clicked(self, sender):
-    self.app.sync()
 
   def _on_notebook_changed(self, combobox):
     if self.on_after_notebook_changed != None:

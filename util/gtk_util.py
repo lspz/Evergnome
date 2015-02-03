@@ -9,18 +9,22 @@ def show_message_dialog(msg, message_type, buttons_type):
   dialog.destroy()
   return response
 
-def create_image_button(icon_name, label='', on_click=None, size=Gtk.IconSize.BUTTON, toggle=False):
-  image = Gtk.Image()
-  image.set_from_icon_name(icon_name, size)
-  
+def create_button(icon=None, label='', action='', on_click=None, size=Gtk.IconSize.BUTTON, toggle=False):
   if toggle:
     button = Gtk.ToggleButton()
   else: 
     button = Gtk.Button()
   
   button.set_label(label)
-  button.set_image(image)
   button.set_property('always_show_image', True)
+  if action != '':
+    button.set_action_name(action)
+  
+  if icon is not None:
+    image = Gtk.Image()
+    image.set_from_icon_name(icon, size)
+    button.set_image(image)
+
   #button.set_relief(Gtk.ReliefStyle.NONE)
   if on_click != None:
     button.connect("toggled" if toggle else "clicked", on_click)

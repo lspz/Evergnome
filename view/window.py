@@ -1,13 +1,10 @@
 from gi.repository import Gtk, Gdk, GLib, Gio
-from evernote.edam.error.ttypes import EDAMErrorCode
 from notelistview import NoteListView
 from headerbar import HeaderBar
 from noteview import NoteView
 from sidebarview import SidebarView
 from model.data_models import *
-from model.consts import EvernoteProcessStatus
-from util import gtk_util
-from model import error_helper
+
 
 
 class AppWindow(Gtk.ApplicationWindow):
@@ -44,38 +41,8 @@ class AppWindow(Gtk.ApplicationWindow):
     
     self.add(main_box)
 
-    self._init_events()
-    self._init_actions()
+    #self._init_events()
     self._init_model_view_links()
-
-  def _init_events(self):
-
-    # huh? move these to app
-    self.app.evernote_handler.connect('auth_started', self._on_auth_started)
-    self.app.evernote_handler.connect('sync_started', self._on_sync_started)
-    self.app.evernote_handler.connect('sync_progress', self._on_sync_progress)
-    self.app.evernote_handler.connect('sync_ended', self._on_sync_ended)
-    
-    # huh? Cannot use signal as it crashes somehow
-    self.app.evernote_handler.on_edam_error = self._on_edam_error
-
-    self.app.evernote_handler.connect('download_resource_started', self._on_download_resource_started)
-    self.app.evernote_handler.connect('download_resource_ended', self._on_download_resource_ended)
-
-    self.headerbar.btn_filter.connect('toggled', self._on_sidebar_reveal)
-
-    self.sidebar.notebooklistview.selection.connect('changed', self.notelistview.on_notebook_changed)
-    self.sidebar.taglistview.selection.connect('changed',  self.notelistview.on_tag_changed)
-
-    # huh? we do this because it pass note obj, hence eliminating 1 dict lookup, not sure if worth doing
-    self.notelistview.on_note_selected = self.noteview.on_note_selected
-
-
-  def _init_actions(self):
-    action = Gio.SimpleAction.new('logout', None)
-    action.connect('activate', self._on_logout)
-    action.set_enabled(True)
-    self.add_action(action)
 
   def _init_model_view_links(self):
     # All views here must have: add_obj
@@ -85,55 +52,6 @@ class AppWindow(Gtk.ApplicationWindow):
     self.model_views[Notebook] = self.sidebar.notebooklistview
     self.model_views[Tag] = self.sidebar.taglistview
 
-  def _on_logout(self, sender, extra):
-    self.app.logout()
-
-  def _on_sidebar_reveal(self, sender):
-    self.sidebar_revealer.set_reveal_child(sender.get_active())
-
-  def _on_sync_started(self, sender):
-    self.headerbar.set_progress_msg('Syncing..')
-
-  def _on_sync_progress(self, sender, msg):
-    self.headerbar.set_progress_msg(msg)
-
-  def _on_sync_ended(self, sender, result, message):
-    if result == EvernoteProcessStatus.SUCCESS:
-      msg = None
-      self.refresh_after_sync()
-    else:
-      msg = 'Sync Failed. ' + message
-    self.headerbar.stop_progress_status(msg)
- 
-  def _on_auth_started(self, sender):
-    self.headerbar.set_progress_msg('Authenticating..')
-
-  def _on_download_resource_started(self, sender):
-    self.headerbar.set_progress_msg('Downloading attachment..')
-
-  def _on_download_resource_ended(self, sender, result, resource_guid, msg):
-    if result == EvernoteProcessStatus.SUCCESS:
-      msg = None
-      resource = Resource.get(Resource.guid==resource_guid)
-      if resource is not None:
-        self.app.open_file_external(resource.localpath)
-        
-    else:
-      msg = 'Cannot download attachment'
-      if msg is not None:
-        msg += '. ' + msg
-    self.headerbar.stop_progress_status(msg)
-
-  def _on_edam_error(self, errorcode, extra_data=''):
-    if errorcode == EDAMErrorCode.AUTH_EXPIRED: 
-      response = gtk_util.show_message_dialog(
-        'Your authentication token has expired. Please re-authenticate again.', 
-        Gtk.MessageType.QUESTION, 
-        Gtk.ButtonsType.OK_CANCEL)
-
-      # huh? THis crashes after returning from evernote
-      if response == Gtk.ResponseType.OK:
-        self.app.evernote_handler.perform_oauth()
 
   def refresh_after_sync(self):
     last_sync_result = self.app.evernote_handler.sync_result 
