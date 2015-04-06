@@ -20,13 +20,16 @@ def init_db(path):
       recreate_schema()
   return db
 
-# huh? This only deletes new stuff
 def clean_cache(path):
   init_db(path)
-  for model in SYNCABLE_MODEL:
-    query = model.delete().where(model.object_status == ObjectStatus.CREATED)
-    count = query.execute() 
-    print 'Deleted ' + str(count) + ' ' + model.__name__
+  for model_class in SYNCABLE_MODEL:
+    del_query = model_class.delete().where(model_class.object_status == ObjectStatus.CREATED)
+    count = del_query.execute() 
+    print 'Deleted ' + str(count) + ' ' + model_class.__name__
+    # huh? This only revert the flag, but doesnt revert the actual data according to server
+    upd_query = model_class.update(object_status=ObjectStatus.SYNCED).where(model_class.object_status != ObjectStatus.SYNCED)
+    count = upd_query.execute() 
+    print 'Reverted to SYNCED: ' + str(count) + ' ' + model_class.__name__
 
 # Handle DB connection and caching
 # class LocalStore:
